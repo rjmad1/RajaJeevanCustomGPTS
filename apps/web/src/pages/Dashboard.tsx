@@ -2,25 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Agent, Category } from '../types';
 import Navbar from '../components/Navbar';
-import AgentCard from '../components/AgentCard';
 import defaultAgentsRaw from '../data/default-agents.json';
-
-// Simple scoring calculation based on deterministic hash for popularity sorting
-function getAgentScore(agentId: string): number {
-  let hash = 0;
-  for (let i = 0; i < agentId.length; i++) {
-    hash = agentId.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  hash = Math.abs(hash);
-  const runs = (hash % 150) * 100 + 100;
-  const rating = 4.0 + (hash % 11) / 10;
-  return runs * rating;
-}
 
 const Dashboard: React.FC = () => {
   const { user, profile } = useAuth();
   
-  // Statically defined categories
+  // Statically defined categories matching original HTML
   const categories: Category[] = [
     { id: 'plan', name: 'plan', sortOrder: 1 },
     { id: 'do', name: 'do', sortOrder: 2 },
@@ -29,24 +16,10 @@ const Dashboard: React.FC = () => {
   ];
 
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  
-  // Search & Filter state
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-  const [selectedCreator, setSelectedCreator] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'popularity' | 'recent'>('name_asc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Layout states (loaded from localStorage for preference persistence)
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>(() => {
-    return (localStorage.getItem('dashboard_view_mode') as 'kanban' | 'list') || 'kanban';
-  });
-  const [densityMode, setDensityMode] = useState<'compact' | 'comfortable'>(() => {
-    return (localStorage.getItem('dashboard_density_mode') as 'compact' | 'comfortable') || 'comfortable';
-  });
-
-  // Modal State for CRUD (Admins only)
+  // Modal State for CRUD (FAB triggered, Admins only)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [agentName, setAgentName] = useState('');
@@ -54,7 +27,7 @@ const Dashboard: React.FC = () => {
   const [agentDesc, setAgentDesc] = useState('');
   const [agentCat, setAgentCat] = useState('plan');
 
-  // File Import status
+  // Backup status
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
@@ -100,50 +73,13 @@ const Dashboard: React.FC = () => {
     loadRegistry();
   }, []);
 
-  // 2. Fetch Favorites for User (Stored per-user email)
-  useEffect(() => {
-    if (!user) return;
-    const favKey = `favorites_${user.email}`;
-    const savedFavs = localStorage.getItem(favKey);
-    setFavorites(savedFavs ? JSON.parse(savedFavs) : []);
-  }, [user]);
-
-  // Extract unique creators for filtering (excluding default 'system')
-  const uniqueCreators = Array.from(
-    new Set(agents.map((a) => a.createdBy).filter((c) => c && c !== 'system'))
-  );
-
-  // Handle Favorites toggle
-  const toggleFavorite = (agentId: string) => {
-    if (!user) return;
-    const favKey = `favorites_${user.email}`;
-    let updated: string[] = [];
-
-    if (favorites.includes(agentId)) {
-      updated = favorites.filter((id) => id !== agentId);
-    } else {
-      updated = [...favorites, agentId];
-    }
-    setFavorites(updated);
-    localStorage.setItem(favKey, JSON.stringify(updated));
-  };
-
   // CRUD Operations
   const openAddModal = () => {
     setEditingAgent(null);
     setAgentName('');
     setAgentUrl('');
     setAgentDesc('');
-    setAgentCat(categories[0]?.id || 'plan');
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (agent: Agent) => {
-    setEditingAgent(agent);
-    setAgentName(agent.name);
-    setAgentUrl(agent.url);
-    setAgentDesc(agent.description);
-    setAgentCat(agent.categoryId);
+    setAgentCat('plan');
     setIsModalOpen(true);
   };
 
@@ -189,7 +125,13 @@ const Dashboard: React.FC = () => {
 
       localStorage.setItem('custom_agents', JSON.stringify(customAgents));
       loadRegistry();
-      setIsModalOpen(false);
+      
+      // Clean form states
+      setEditingAgent(null);
+      setAgentName('');
+      setAgentUrl('');
+      setAgentDesc('');
+      setAgentCat('plan');
     } catch (err) {
       console.error("Error saving agent:", err);
       alert("Failed to save agent.");
@@ -215,6 +157,15 @@ const Dashboard: React.FC = () => {
           localStorage.setItem('deleted_agents', JSON.stringify(deletedIds));
         }
       }
+      
+      // If we are currently editing the deleted agent, clean the form
+      if (editingAgent?.id === agentId) {
+        setEditingAgent(null);
+        setAgentName('');
+        setAgentUrl('');
+        setAgentDesc('');
+      }
+
       loadRegistry();
     } catch (err) {
       console.error("Error deleting agent:", err);
@@ -408,7 +359,7 @@ const Dashboard: React.FC = () => {
   const getFilteredAgents = (categoryId: string) => {
     let filtered = agents.filter((a) => a.categoryId === categoryId);
     
-    // Fuzzy text filtering
+    // Search filter
     if (search.trim()) {
       const queryStr = search.toLowerCase();
       filtered = filtered.filter(
@@ -416,33 +367,12 @@ const Dashboard: React.FC = () => {
       );
     }
 
-    // Favorites filter
-    if (showOnlyFavorites) {
-      filtered = filtered.filter((a) => favorites.includes(a.id));
-    }
-
-    // Creator filter
-    if (selectedCreator !== 'all') {
-      if (selectedCreator === 'system') {
-        filtered = filtered.filter((a) => a.createdBy === 'system');
-      } else {
-        filtered = filtered.filter((a) => a.createdBy === selectedCreator);
-      }
-    }
-
     // Sort order
     filtered.sort((a, b) => {
-      if (sortBy === 'name_asc') {
+      if (sortOrder === 'asc') {
         return a.name.localeCompare(b.name);
-      } else if (sortBy === 'name_desc') {
-        return b.name.localeCompare(a.name);
-      } else if (sortBy === 'popularity') {
-        return getAgentScore(b.id) - getAgentScore(a.id);
       } else {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        if (dateA !== dateB) return dateB - dateA;
-        return b.id.localeCompare(a.id);
+        return b.name.localeCompare(a.name);
       }
     });
 
@@ -453,320 +383,119 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-brand-950 transition-colors duration-200 pb-16">
       <Navbar />
 
-      {/* Expanded Board container to 96% viewport width */}
+      {/* Main Container mirroring the original HTML sizing */}
       <main className="w-full max-w-[97%] mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         
-        {/* Advanced Controls Panel */}
-        <div className="flex flex-col gap-4 p-5 mb-8 rounded-2xl glass-panel shadow-premium border border-slate-200/50 dark:border-slate-800/30">
-          
-          {/* Top Row: Search & Layout View Toggles */}
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            {/* Search Input */}
-            <div className="relative w-full lg:max-w-xl">
-              <input
-                type="text"
-                placeholder="Search 100+ GPTs by name, description, category, or creator..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl outline-none transition-all text-sm focus:shadow-md"
-              />
-              <svg
-                className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        {/* Simple Controls (Mirroring original controls with only Search and A-Z sort button) */}
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-center p-4 mb-8 rounded-2xl glass-panel shadow-sm border border-slate-200/50 dark:border-slate-800/30">
+          <div className="relative w-full max-w-md">
+            <input
+              type="text"
+              placeholder="Search agents..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl outline-none transition-all text-sm"
+            />
+            <svg
+              className="absolute left-3.5 top-3 w-4 h-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {search && (
+              <button 
+                onClick={() => setSearch('')}
+                className="absolute right-3.5 top-2.5 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              {search && (
-                <button 
-                  onClick={() => setSearch('')}
-                  className="absolute right-3.5 top-3.5 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-
-            {/* Layout Density and View Mode selectors */}
-            <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto justify-end">
-              {/* View Mode (Board vs List) */}
-              <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/50 dark:border-slate-800/40 shrink-0">
-                <button
-                  onClick={() => { setViewMode('kanban'); localStorage.setItem('dashboard_view_mode', 'kanban'); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                    viewMode === 'kanban' 
-                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                  aria-label="Switch to Board View"
-                >
-                  <span>📋 Board</span>
-                </button>
-                <button
-                  onClick={() => { setViewMode('list'); localStorage.setItem('dashboard_view_mode', 'list'); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                    viewMode === 'list' 
-                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                  aria-label="Switch to List View"
-                >
-                  <span>📝 List</span>
-                </button>
-              </div>
-
-              {/* Density Mode (Comfortable vs Compact) */}
-              <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/50 dark:border-slate-800/40 shrink-0">
-                <button
-                  onClick={() => { setDensityMode('comfortable'); localStorage.setItem('dashboard_density_mode', 'comfortable'); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                    densityMode === 'comfortable' 
-                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                  aria-label="Comfortable Density"
-                >
-                  <span>Comfortable</span>
-                </button>
-                <button
-                  onClick={() => { setDensityMode('compact'); localStorage.setItem('dashboard_density_mode', 'compact'); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                    densityMode === 'compact' 
-                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                  aria-label="Compact Density"
-                >
-                  <span>Compact</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Row: Advanced Filters and Sorters */}
-          <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-slate-100 dark:border-slate-800/40">
-            
-            {/* Category filter dropdown */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Category</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs outline-none shadow-sm focus:border-indigo-500 transition-all focus:ring-2 focus:ring-indigo-500/20"
-              >
-                <option value="all">All Categories</option>
-                <option value="plan">Plan</option>
-                <option value="do">Do</option>
-                <option value="check">Check</option>
-                <option value="act">Act</option>
-              </select>
-            </div>
-
-            {/* Sort options */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sort By</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs outline-none shadow-sm focus:border-indigo-500 transition-all focus:ring-2 focus:ring-indigo-500/20"
-              >
-                <option value="name_asc">Name (A-Z)</option>
-                <option value="name_desc">Name (Z-A)</option>
-                <option value="popularity">Popularity (Most Runs)</option>
-                <option value="recent">Recently Added</option>
-              </select>
-            </div>
-
-            {/* Creator filter dropdown */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Creator</label>
-              <select
-                value={selectedCreator}
-                onChange={(e) => setSelectedCreator(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs outline-none shadow-sm focus:border-indigo-500 transition-all focus:ring-2 focus:ring-indigo-500/20 max-w-[180px]"
-              >
-                <option value="all">All Creators</option>
-                <option value="system">System (Seed)</option>
-                {uniqueCreators.map((creator) => (
-                  <option key={creator} value={creator}>
-                    {creator.split('@')[0]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Favorites filter Toggle */}
-            <div className="flex flex-col gap-1.5 self-end">
-              <button
-                onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all shadow-sm h-[38px] outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                  showOnlyFavorites 
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400' 
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:text-slate-700'
-                }`}
-                aria-label="Filter by Favorites Only"
-              >
-                <svg className={`w-3.5 h-3.5 ${showOnlyFavorites ? 'fill-amber-500 text-amber-500' : 'stroke-current'}`} viewBox="0 0 24 24" fill={showOnlyFavorites ? 'currentColor' : 'none'} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.371 1.24.588 1.81l-3.97 2.883a1 1 0 00-.364 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.971-2.883a1 1 0 00-1.18 0l-3.97 2.883c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h4.906a1 1 0 00.951-.69l1.519-4.674z"/>
-                </svg>
-                <span>Favorites Only</span>
+                Clear
               </button>
-            </div>
-
-            {/* Clear/Reset button */}
-            {(search || selectedCategory !== 'all' || selectedCreator !== 'all' || showOnlyFavorites || sortBy !== 'name_asc') && (
-              <div className="flex flex-col gap-1.5 self-end">
-                <button
-                  onClick={() => {
-                    setSearch('');
-                    setSelectedCategory('all');
-                    setSelectedCreator('all');
-                    setShowOnlyFavorites(false);
-                    setSortBy('name_asc');
-                  }}
-                  className="px-3.5 py-2 text-xs font-bold text-red-500 hover:text-red-600 transition-colors h-[38px] outline-none focus-visible:underline"
-                >
-                  Reset Filters
-                </button>
-              </div>
             )}
           </div>
+
+          <button
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            className="w-full sm:w-auto px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all focus-visible:ring-2 focus-visible:ring-indigo-500 h-[38px] flex items-center justify-center gap-1"
+          >
+            <span>Sort:</span>
+            <span className="uppercase">{sortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>
+          </button>
         </div>
 
-        {/* -------------------------------------------------------------
-            3. RENDER VIEWS: KANBAN vs LIST
-           ------------------------------------------------------------- */}
-        {viewMode === 'kanban' ? (
-          /* Kanban View Layout (Columns stretch to fill available width and keep 340-380px widths) */
-          <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch overflow-x-auto pb-6 scrollbar-thin">
-            {categories
-              .filter((c) => selectedCategory === 'all' || c.id === selectedCategory)
-              .map((cat) => {
-                const filteredList = getFilteredAgents(cat.id);
-                
-                // Define category header style mappings dynamically
-                let headerStyle = 'bg-plan-gradientStart';
-                let borderStyle = 'border-indigo-100 dark:border-indigo-900/30';
-                let pillIcon = '🧠';
-                if (cat.id === 'plan') {
-                  headerStyle = 'bg-gradient-to-r from-plan-gradientStart to-plan-gradientEnd';
-                  borderStyle = 'border-blue-100 dark:border-blue-900/30';
-                  pillIcon = '🧠';
-                } else if (cat.id === 'do') {
-                  headerStyle = 'bg-gradient-to-r from-do-gradientStart to-do-gradientEnd';
-                  borderStyle = 'border-emerald-100 dark:border-emerald-900/30';
-                  pillIcon = '⚙️';
-                } else if (cat.id === 'check') {
-                  headerStyle = 'bg-gradient-to-r from-check-gradientStart to-check-gradientEnd';
-                  borderStyle = 'border-amber-100 dark:border-amber-900/30';
-                  pillIcon = '🔍';
-                } else if (cat.id === 'act') {
-                  headerStyle = 'bg-gradient-to-r from-act-gradientStart to-act-gradientEnd';
-                  borderStyle = 'border-red-100 dark:border-red-900/30';
-                  pillIcon = '🚀';
-                }
-
-                return (
-                  <div 
-                    key={cat.id} 
-                    className={`flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-premium border ${borderStyle} overflow-hidden transition-all duration-200 hover:shadow-premium-hover w-full lg:w-[360px] lg:min-w-[340px] lg:max-w-[380px] flex-grow flex-shrink-0`}
-                  >
-                    {/* Category Header */}
-                    <div className={`px-5 py-4 text-white font-bold text-sm tracking-wide flex items-center gap-2 ${headerStyle}`}>
-                      <span className="text-lg">{pillIcon}</span>
-                      <span className="capitalize">{cat.name}</span>
-                      <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">
-                        {filteredList.length}
-                      </span>
-                    </div>
-
-                    {/* Agents Scrollable Column Body */}
-                    <div className="p-3.5 flex-1 flex flex-col gap-3 overflow-y-auto max-h-[70vh] min-h-[300px] scrollbar-thin">
-                      {filteredList.length === 0 ? (
-                        <div className="text-slate-400 dark:text-slate-500 italic text-xs py-8 text-center bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
-                          No matching agents
-                        </div>
-                      ) : (
-                        filteredList.map((agent) => (
-                          <AgentCard
-                            key={agent.id}
-                            agent={agent}
-                            isFavorite={favorites.includes(agent.id)}
-                            onToggleFavorite={() => toggleFavorite(agent.id)}
-                            isAdmin={isAdmin}
-                            onEdit={() => openEditModal(agent)}
-                            onDelete={() => handleDeleteAgent(agent.id)}
-                            density={densityMode}
-                            viewMode="kanban"
-                          />
-                        ))
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        ) : (
-          /* List View Layout (Responsive flat list stretching 95-98% viewport width) */
-          <div className="flex flex-col gap-3 w-full bg-white dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/30 shadow-premium">
+        {/* Directory Grid matching original media query spacing */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {categories.map((cat) => {
+            const filteredList = getFilteredAgents(cat.id);
             
-            {/* Table-like headers (Hidden on Mobile) */}
-            <div className="hidden md:flex items-center justify-between px-5 py-3 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-200/50 dark:border-slate-800/30">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <span className="w-11 text-center shrink-0">Fav</span>
-                <span className="flex-1 pl-2">GPT Agent Description</span>
-              </div>
-              <div className="flex items-center justify-end gap-6 shrink-0 text-right pr-4">
-                <span className="w-24 text-center">Category</span>
-                <span className="w-48 text-center">Metrics / Usage</span>
-                {densityMode === 'comfortable' && <span className="w-28 text-left pl-2">Creator</span>}
-                <span className="w-11 text-center">Options</span>
-              </div>
-            </div>
+            // Define header background and icons
+            let headerStyle = 'bg-gradient-to-r from-plan-gradientStart to-plan-gradientEnd';
+            let pillIcon = '🧠';
+            if (cat.id === 'plan') {
+              headerStyle = 'bg-gradient-to-r from-plan-gradientStart to-plan-gradientEnd';
+              pillIcon = '🧠';
+            } else if (cat.id === 'do') {
+              headerStyle = 'bg-gradient-to-r from-do-gradientStart to-do-gradientEnd';
+              pillIcon = '⚙️';
+            } else if (cat.id === 'check') {
+              headerStyle = 'bg-gradient-to-r from-check-gradientStart to-check-gradientEnd';
+              pillIcon = '🔍';
+            } else if (cat.id === 'act') {
+              headerStyle = 'bg-gradient-to-r from-act-gradientStart to-act-gradientEnd';
+              pillIcon = '🚀';
+            }
 
-            {/* Unified Flat list items (Allows scrolling across all 100+ agents in a clean linear feed) */}
-            <div className="flex flex-col gap-2.5">
-              {categories
-                .filter((c) => selectedCategory === 'all' || c.id === selectedCategory)
-                .flatMap((cat) => getFilteredAgents(cat.id))
-                .length === 0 ? (
-                  <div className="text-slate-400 dark:text-slate-500 italic text-xs py-12 text-center bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
-                    No matching agents found in registry.
-                  </div>
-                ) : (
-                  // Map over unified flat list and apply unified sorting
-                  categories
-                    .filter((c) => selectedCategory === 'all' || c.id === selectedCategory)
-                    .flatMap((cat) => getFilteredAgents(cat.id))
-                    .sort((a, b) => {
-                      if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
-                      if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
-                      if (sortBy === 'popularity') {
-                        return getAgentScore(b.id) - getAgentScore(a.id);
-                      }
-                      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                      if (dateA !== dateB) return dateB - dateA;
-                      return b.id.localeCompare(a.id);
-                    })
-                    .map((agent) => (
-                      <AgentCard
-                        key={agent.id}
-                        agent={agent}
-                        isFavorite={favorites.includes(agent.id)}
-                        onToggleFavorite={() => toggleFavorite(agent.id)}
-                        isAdmin={isAdmin}
-                        onEdit={() => openEditModal(agent)}
-                        onDelete={() => handleDeleteAgent(agent.id)}
-                        density={densityMode}
-                        viewMode="list"
-                      />
+            return (
+              <div 
+                key={cat.id} 
+                className="flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/50 dark:border-slate-800/30 overflow-hidden hover:shadow-md transition-shadow"
+              >
+                {/* Column Header */}
+                <div className={`px-4 py-3.5 text-white font-bold text-sm flex items-center gap-2 ${headerStyle}`}>
+                  <span className="text-base">{pillIcon}</span>
+                  <span className="capitalize">{cat.name}</span>
+                  <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">
+                    {filteredList.length}
+                  </span>
+                </div>
+
+                {/* Column Body listing simple links with hover tooltips */}
+                <div className="p-3 flex-1 flex flex-col gap-1.5 overflow-y-auto max-h-[70vh] min-h-[150px]">
+                  {filteredList.length === 0 ? (
+                    <div className="text-slate-400 dark:text-slate-500 italic text-xs py-4 text-center">
+                      No matches
+                    </div>
+                  ) : (
+                    filteredList.map((agent) => (
+                      <div key={agent.id} className="relative group/link w-full">
+                        <a
+                          href={agent.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-slate-800/40 transition-colors w-full truncate focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none"
+                        >
+                          <span className="shrink-0 text-slate-400 group-hover/link:text-indigo-500 transition-colors">🔗</span>
+                          <span className="truncate">{agent.name}</span>
+                        </a>
+                        
+                        {/* Custom CSS Hover Tooltip */}
+                        <div className="absolute hidden group-hover/link:block left-1/2 -translate-x-1/2 bottom-full mb-2.5 z-50 w-72 p-4 bg-slate-950/95 dark:bg-slate-900/95 text-white rounded-xl shadow-xl border border-slate-800/40 text-xs leading-relaxed pointer-events-none animate-fadeIn">
+                          <h4 className="font-bold text-slate-100 mb-1.5 border-b border-slate-800 pb-1 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                            {agent.name}
+                          </h4>
+                          <p className="text-slate-300 font-medium">
+                            {agent.description || 'No description provided.'}
+                          </p>
+                        </div>
+                      </div>
                     ))
-                )}
-            </div>
-          </div>
-        )}
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </main>
 
       {/* Floating Action Button (FAB) for Admin CRUD */}
@@ -782,93 +511,153 @@ const Dashboard: React.FC = () => {
         </button>
       )}
 
-      {/* Admin Operations Modal */}
+      {/* Admin Operations Modal (Housed all CRUD and Portability in one Clean sheet) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-2xl shadow-xl overflow-hidden animate-scaleIn">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
               <h3 className="font-bold text-slate-900 dark:text-white">
-                {editingAgent ? 'Edit Custom GPT' : 'Add Custom GPT'}
+                {editingAgent ? 'Edit Custom GPT' : 'Manage Custom GPTs'}
               </h3>
               <button 
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); setEditingAgent(null); }}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none"
               >
                 &times;
               </button>
             </div>
 
-            <form onSubmit={handleSaveAgent} className="p-6 space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Category</label>
-                <select
-                  value={agentCat}
-                  onChange={(e) => setAgentCat(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm transition-all focus:ring-2 focus:ring-indigo-500/20"
-                >
-                  <option value="plan">Plan</option>
-                  <option value="do">Do</option>
-                  <option value="check">Check</option>
-                  <option value="act">Act</option>
-                </select>
-              </div>
+            <div className="p-6 overflow-y-auto max-h-[80vh] space-y-4">
+              
+              {/* 1. Scrollable List of GPTs for Editing / Deletion */}
+              {!editingAgent && (
+                <div>
+                  <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Active Registry ({agents.length})</h4>
+                  <div className="max-h-[220px] overflow-y-auto border border-slate-100 dark:border-slate-800/60 rounded-xl p-2.5 space-y-1.5 bg-slate-50/50 dark:bg-slate-950/20">
+                    {agents.length === 0 ? (
+                      <div className="text-xs text-slate-400 italic text-center py-4">No agents available</div>
+                    ) : (
+                      agents.map((agent) => (
+                        <div key={agent.id} className="flex items-center justify-between p-2 hover:bg-white dark:hover:bg-slate-900 rounded-lg border-b border-slate-100 dark:border-slate-800/30 last:border-b-0 gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{agent.name}</div>
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold">{agent.categoryId}</div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingAgent(agent);
+                                setAgentName(agent.name);
+                                setAgentUrl(agent.url);
+                                setAgentDesc(agent.description);
+                                setAgentCat(agent.categoryId);
+                              }}
+                              className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 dark:text-indigo-400 rounded text-[10px] font-bold transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAgent(agent.id)}
+                              className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/40 dark:hover:bg-red-900/60 dark:text-red-400 rounded text-[10px] font-bold transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="GPT Name"
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm transition-all focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
+              {/* 2. Add / Edit form */}
+              <form onSubmit={handleSaveAgent} className="space-y-3.5 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  {editingAgent ? 'Edit Agent Form' : 'Add New Agent'}
+                </h4>
+                
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Category</label>
+                  <select
+                    value={agentCat}
+                    onChange={(e) => setAgentCat(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-xs transition-all focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    <option value="plan">Plan</option>
+                    <option value="do">Do</option>
+                    <option value="check">Check</option>
+                    <option value="act">Act</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">URL</label>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://chatgpt.com/g/g-..."
-                  value={agentUrl}
-                  onChange={(e) => setAgentUrl(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm transition-all focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="GPT Name"
+                    value={agentName}
+                    onChange={(e) => setAgentName(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-xs transition-all focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Description</label>
-                <textarea
-                  placeholder="Enter a description of what this AI Agent helper does..."
-                  value={agentDesc}
-                  onChange={(e) => setAgentDesc(e.target.value)}
-                  rows={3}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm transition-all resize-none focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">URL</label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://chatgpt.com/g/g-..."
+                    value={agentUrl}
+                    onChange={(e) => setAgentUrl(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-xs transition-all focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
 
-              <div className="pt-2 flex gap-3">
-                <button
-                  type="submit"
-                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm transition-all shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-                >
-                  Save Agent
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-sm transition-all border border-slate-200/20 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                >
-                  Cancel
-                </button>
-              </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Description</label>
+                  <textarea
+                    placeholder="Enter a description..."
+                    value={agentDesc}
+                    onChange={(e) => setAgentDesc(e.target.value)}
+                    rows={2.5}
+                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-xs transition-all resize-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
 
-              <div className="border-t border-slate-100 dark:border-slate-800 my-4 pt-4">
-                <h4 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Registry Backups & Portability</h4>
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs transition-all shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                  >
+                    Save Agent
+                  </button>
+                  {editingAgent && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingAgent(null);
+                        setAgentName('');
+                        setAgentUrl('');
+                        setAgentDesc('');
+                        setAgentCat('plan');
+                      }}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs transition-all border border-slate-200/20 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              {/* 3. Portability Backups */}
+              <div className="border-t border-slate-100 dark:border-slate-800/60 my-4 pt-4">
+                <h4 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Backups & Portability</h4>
                 
                 {importStatus && (
-                  <div className="mb-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 text-xs text-indigo-700 dark:text-indigo-300 rounded-lg">
+                  <div className="mb-3 p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-xs text-indigo-700 dark:text-indigo-300 rounded-lg">
                     {importStatus}
                   </div>
                 )}
@@ -877,7 +666,7 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleExportJSON}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 rounded-lg text-xs font-semibold"
+                    className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 rounded-lg text-xs font-semibold"
                   >
                     Export JSON
                   </button>
@@ -892,7 +681,7 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => document.getElementById('importFile')?.click()}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 rounded-lg text-xs font-semibold"
+                    className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 rounded-lg text-xs font-semibold"
                   >
                     Import JSON
                   </button>
@@ -900,13 +689,14 @@ const Dashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleEmbedAndSaveHTML}
-                    className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    className="w-full px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
                   >
                     💾 Embed & Save Standalone File
                   </button>
                 </div>
               </div>
-            </form>
+
+            </div>
           </div>
         </div>
       )}
