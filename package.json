@@ -1,0 +1,16 @@
+{
+  "name": "ai-agent-portal-root",
+  "private": true,
+  "scripts": {
+    "bootstrap": "npm install",
+    "web:dev": "npm run dev --workspace=apps/web",
+    "web:build": "npm run build --workspace=apps/web",
+    "functions:build": "npm run build --workspace=functions",
+    "seed": "npm run seed --workspace=scripts"
+  },
+  "workspaces": [
+    "apps/web",
+    "functions",
+    "scripts"
+  ]
+}

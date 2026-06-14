@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raja Jeevan K Maduri - CustomGPT Hub</title>
+
+<style>
+/* ── Reset & Base ─────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;font-size:16px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:#f4f6fb;color:#1f2937;line-height:1.5;
+  min-height:100vh;min-height:100dvh;
+  overflow-x:hidden;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+.header{
+  text-align:center;padding:1rem;font-size:1.125rem;font-weight:700;
+  background:linear-gradient(135deg,#4f7dcf 0%,#6c5ce7 100%);
+  color:#fff;letter-spacing:.02em;
+  position:sticky;top:0;z-index:50;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+
+/* ── Controls ─────────────────────────────────────────── */
+.controls{
+  display:flex;flex-wrap:wrap;justify-content:center;
+  gap:.625rem;padding:.75rem 1rem;
+  position:sticky;top:3.25rem;z-index:40;
+  background:#f4f6fb;
+}
+.search{
+  width:100%;max-width:26rem;padding:.625rem .875rem;
+  border:1px solid #cfd8ea;border-radius:.5rem;font-size:.9375rem;
+  transition:border-color .2s,box-shadow .2s;
+  background:#fff;
+}
+.search:focus{outline:none;border-color:#4f7dcf;box-shadow:0 0 0 3px rgba(79,125,207,.2)}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:.5rem 1rem;min-height:2.75rem;
+  border:none;border-radius:.5rem;cursor:pointer;
+  font-size:.8125rem;font-weight:600;
+  transition:background .15s,transform .1s,box-shadow .15s;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:#4f7dcf;color:#fff}
+.btn-primary:hover{background:#3d6bbf;box-shadow:0 2px 8px rgba(79,125,207,.3)}
+.btn-secondary{background:#6b7280;color:#fff}
+.btn-secondary:hover{background:#565e6b}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-danger:hover{background:#dc2626}
+.btn-sm{padding:.375rem .625rem;min-height:2.25rem;font-size:.75rem;border-radius:.375rem}
+
+/* ── Card Grid (replaces table) ───────────────────────── */
+.grid-container{padding:.75rem 1rem}
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:.75rem;
+}
+.column-card{
+  background:#fff;border-radius:.75rem;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+  overflow:hidden;
+  transition:box-shadow .2s;
+}
+.column-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.column-header{
+  padding:.75rem 1rem;font-weight:700;font-size:.9375rem;
+  color:#fff;display:flex;align-items:center;gap:.5rem;
+}
+.column-header.plan{background:linear-gradient(135deg,#4f7dcf,#3b6fc4)}
+.column-header.do{background:linear-gradient(135deg,#10b981,#059669)}
+.column-header.check{background:linear-gradient(135deg,#f59e0b,#d97706)}
+.column-header.act{background:linear-gradient(135deg,#ef4444,#dc2626)}
+
+.column-body{padding:.75rem 1rem;min-height:3rem}
+.column-body a{
+  display:flex;align-items:center;gap:.375rem;
+  color:#2b59c3;text-decoration:none;
+  padding:.5rem .625rem;border-radius:.375rem;
+  font-size:.875rem;font-weight:500;
+  transition:background .15s,color .15s;
+  line-height:1.4;
+}
+.column-body a:hover{background:#eef2ff;color:#1e40af}
+.column-body a:active{background:#dbeafe}
+.column-body .empty-state{
+  color:#9ca3af;font-size:.8125rem;font-style:italic;
+  padding:.5rem .625rem;
+}
+
+/* ── Tooltip ──────────────────────────────────────────── */
+.tooltip{
+  position:fixed;max-width:20rem;
+  background:#111827;color:#fff;
+  padding:1rem;border-radius:.625rem;
+  font-size:.8125rem;line-height:1.55;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  pointer-events:none;opacity:0;
+  transition:opacity .15s;z-index:999;
+  word-wrap:break-word;
+}
+.tooltip h4{margin:0 0 .375rem 0;font-size:.875rem;font-weight:600}
+
+/* Touch tooltip (bottom sheet style) */
+.touch-tooltip{
+  display:none;position:fixed;
+  bottom:0;left:0;right:0;
+  background:#111827;color:#fff;
+  padding:1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  border-radius:1rem 1rem 0 0;
+  font-size:.875rem;line-height:1.55;
+  box-shadow:0 -4px 24px rgba(0,0,0,.3);
+  z-index:998;
+  max-height:40vh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.touch-tooltip.active{display:block;animation:slideUp .2s ease-out}
+.touch-tooltip h4{margin:0 0 .375rem 0;font-size:1rem;font-weight:600}
+.touch-tooltip .close-tip{
+  position:absolute;top:.75rem;right:1rem;
+  background:none;border:none;color:#9ca3af;
+  font-size:1.25rem;cursor:pointer;padding:.25rem;
+  min-height:auto;
+}
+
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* ── FAB ──────────────────────────────────────────────── */
+.fab{
+  position:fixed;bottom:1.5rem;right:1.5rem;
+  width:3.5rem;height:3.5rem;border-radius:50%;
+  background:linear-gradient(135deg,#4f7dcf,#6c5ce7);
+  color:#fff;font-size:1.75rem;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  box-shadow:0 6px 20px rgba(79,125,207,.4);
+  z-index:100;
+  transition:transform .15s,box-shadow .15s;
+  -webkit-tap-highlight-color:transparent;
+  border:none;
+}
+.fab:hover{transform:scale(1.08);box-shadow:0 8px 28px rgba(79,125,207,.5)}
+.fab:active{transform:scale(.95)}
+
+/* ── Modal ────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;align-items:flex-end;justify-content:center;
+  z-index:1001;
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+}
+.modal-overlay.active{display:flex}
+
+.modal-content{
+  background:#fff;
+  width:100%;max-width:36rem;
+  max-height:92vh;max-height:92dvh;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:1.25rem;
+  border-radius:1rem 1rem 0 0;
+  font-size:.875rem;line-height:1.6;
+  box-shadow:0 -8px 32px rgba(0,0,0,.2);
+  animation:slideUp .25s ease-out;
+}
+
+.modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:.75rem;position:sticky;top:0;
+  background:#fff;padding-bottom:.5rem;
+  border-bottom:1px solid #e5e7eb;
+}
+.modal-header h3{font-size:1.0625rem;font-weight:700;margin:0}
+
+.modal-content input,
+.modal-content textarea,
+.modal-content select{
+  width:100%;padding:.625rem .75rem;margin-bottom:.625rem;
+  border:1px solid #d1d5db;border-radius:.5rem;
+  font-size:.875rem;font-family:inherit;
+  transition:border-color .2s,box-shadow .2s;
+  background:#fff;
+}
+.modal-content input:focus,
+.modal-content textarea:focus,
+.modal-content select:focus{
+  outline:none;border-color:#4f7dcf;
+  box-shadow:0 0 0 3px rgba(79,125,207,.15);
+}
+.modal-content textarea{resize:vertical;min-height:4.5rem}
+
+.modal-content hr{border:none;border-top:1px solid #e5e7eb;margin:.875rem 0}
+.modal-content h4{font-size:.9375rem;font-weight:600;margin-bottom:.5rem;color:#374151}
+
+.form-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.backup-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+/* ── Manage list ──────────────────────────────────────── */
+.manage-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:.625rem 0;border-bottom:1px solid #f3f4f6;
+  gap:.5rem;
+}
+.manage-row b{
+  font-size:.8125rem;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  flex:1;min-width:0;
+}
+.manage-actions{
+  display:flex;gap:.375rem;flex-shrink:0;
+}
+.manage-empty{
+  color:#9ca3af;font-size:.8125rem;
+  font-style:italic;padding:.5rem 0;
+}
+
+/* ── Tablet / Desktop ─────────────────────────────────── */
+@media(min-width:640px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .modal-content{
+    border-radius:1rem;
+    margin-bottom:2rem;
+  }
+  .modal-overlay{align-items:center}
+  .controls{top:3.5rem}
+}
+@media(min-width:1024px){
+  .grid{grid-template-columns:repeat(4,1fr)}
+  .grid-container{padding:1rem 2rem}
+  .header{font-size:1.25rem;padding:1.125rem}
+}
+
+/* ── Accessibility ────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+
+/* ── Print ────────────────────────────────────────────── */
+@media print{
+  .fab,.controls,.modal-overlay,.tooltip,.touch-tooltip{display:none!important}
+  .header{background:#4f7dcf!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .column-card{break-inside:avoid}
+}
+</style>
+</head>
+
+<body style="overflow: hidden;">
+
+<div class="header" role="banner">Raja Jeevan K Maduri's CustomGPTs / AI Agents Hub</div>
+
+<div class="controls" role="search">
+  <input id="search" class="search" type="search" placeholder="Search agents..." aria-label="Search agents" oninput="render()">
+  <button class="btn btn-primary" onclick="sortAgents()" aria-label="Sort agents alphabetically">Sort A‑Z</button>
+</div>
+
+<div class="grid-container">
+  <div class="grid" id="grid" role="main">
+    <div class="column-card">
+      <div class="column-header plan"><span>🧠</span> Plan</div>
+      <div class="column-body" id="plan"><a href="https://chatgpt.com/g/g-69363ede2cc48191bfdb7ac7c55239d7-agentic-ai-elicitation-blueprint-building-guide" target="_blank" rel="noopener noreferrer">Agentic AI Blueprint</a><a href="https://chatgpt.com/g/g-69363ede2cc48191bfdb7ac7c55239d7-agentic-ai-elicitation-blueprint-building-guide" target="_blank" rel="noopener noreferrer">Agentic AI Elicitation - Blueprint - Building Guide</a><a href="https://chatgpt.com/g/g-694f89acbfb08191a0d87dd74d57f270-ai-pathfinder" target="_blank" rel="noopener noreferrer">AI Pathfinder</a><a href="https://chatgpt.com/g/g-6977fe98bec08191baad1b430e33ce89-best-practices-engine" target="_blank" rel="noopener noreferrer">Best Practices Engine</a><a href="https://chatgpt.com/g/g-698f2f91a0608191b6c4bab1fc6e0424-business-idea-market-fit-examiner" target="_blank" rel="noopener noreferrer">Business Idea Market Fit Examiner</a><a href="https://chatgpt.com/g/g-6919d057e3608191b2b2658ed2162956-career-role-breakdown-assistant" target="_blank" rel="noopener noreferrer">Career Role Breakdown Assistant</a><a href="https://chatgpt.com/g/g-691efedbe6148191a0a9d2dbff8b33a9-competitor-vulnerability-scanner" target="_blank" rel="noopener noreferrer">Competitor Vulnerability Scanner</a><a href="https://chatgpt.com/g/g-69759556774881918446062f447a5f97-data-engineer-analyst-scientist" target="_blank" rel="noopener noreferrer">Data Engineer Analyst Scientist</a><a href="https://chatgpt.com/g/g-694f3156bc8081918a09fd2352dd64a0-enterprise-capability-strategist" target="_blank" rel="noopener noreferrer">Enterprise Capability Strategist</a><a href="https://chatgpt.com/g/g-6991ce766bec8191b40aa8271e055461-enterprise-company-researcher" target="_blank" rel="noopener noreferrer">Enterprise Company Researcher</a><a href="https://chatgpt.com/g/g-691dcf60167c8191ada538d8388419bf-expert-learning-guide" target="_blank" rel="noopener noreferrer">Expert Learning Guide</a><a href="https://chatgpt.com/g/g-6976fa5cad2881918de8b5ef8a7f325f-gtm-strategist-and-troubleshooter" target="_blank" rel="noopener noreferrer">GTM Strategist and Troubleshooter</a><a href="https://chatgpt.com/g/g-69196056bedc8191b752e4cb9dfd882c-industry-strategy-lab" target="_blank" rel="noopener noreferrer">Industry Strategy Lab</a><a href="https://chatgpt.com/g/g-69743af49b708191b9cae5f15fbf27e6-intellectual-sparring-partner" target="_blank" rel="noopener noreferrer">Intellectual Sparring Partner</a><a href="https://chatgpt.com/g/g-69197811bdd48191962d863122fe1b6c-knowledge-assistant" target="_blank" rel="noopener noreferrer">Knowledge Assistant</a><a href="https://chatgpt.com/g/g-697b12285fec8191a7c42926f376bbef-leverage-coach" target="_blank" rel="noopener noreferrer">Leverage Coach</a><a href="https://chatgpt.com/g/g-691974d25fc48191894606d47d6065f0-market-researcher-and-analyst" target="_blank" rel="noopener noreferrer">Market Researcher and Analyst</a><a href="https://chatgpt.com/g/g-696db92537888191b381384242d88246-problem-framer-pro" target="_blank" rel="noopener noreferrer">Problem Framer Pro</a><a href="https://chatgpt.com/g/g-6976f54e7d448191ae00915975e0c9fa-project-program-portfolio-leader" target="_blank" rel="noopener noreferrer">Project Program Portfolio Leader</a><a href="https://chatgpt.com/g/g-6940150b5550819181fef4024a730ef9-proposal-engine-gpt" target="_blank" rel="noopener noreferrer">Proposal Engine GPT</a><a href="https://chatgpt.com/g/g-69ca31022c1c8191b7da33ec4ea782ab-meeting-action-extractor" target="_blank" rel="noopener noreferrer">Meeting Action Extractor</a></div>
+    </div>
+    <div class="column-card">
+      <div class="column-header do"><span>⚙️</span> Do</div>
+      <div class="column-body" id="do"><a href="https://chatgpt.com/g/g-69a60cdcd22881919adc140a75b7c8f8-brownfield-reverse-engineer" target="_blank" rel="noopener noreferrer">Brownfield Reverse Engineer</a><a href="https://chatgpt.com/g/g-69197cd50fdc81918c073df675267d89-codementor-ai" target="_blank" rel="noopener noreferrer">CodeMentor AI</a><a href="https://chatgpt.com/g/g-69acd45fe9908191ad2db142fcd3f1f3-consulting-deck-architect" target="_blank" rel="noopener noreferrer">Consulting Deck Architect</a><a href="https://chatgpt.com/g/g-69647847978c819185a45772ddd6bf0d-customgpt-architect" target="_blank" rel="noopener noreferrer">CustomGPT Architect</a><a href="https://chatgpt.com/g/g-692c0cae04fc8191a9d78b49f114cdb2-greenfield-brownfield-vibe-coding-architect" target="_blank" rel="noopener noreferrer">Greenfield Brownfield Vibe Coding Architect</a><a href="https://chatgpt.com/g/g-695dd693819c8191805c815fd71d62f5-harada-nano-banana-prompt-gpt" target="_blank" rel="noopener noreferrer">HARADA Nano Banana Prompt GPT</a><a href="https://chatgpt.com/g/g-692a5f6566908191b1af7dd07367d95b-senior-product-manager-pro" target="_blank" rel="noopener noreferrer">Senior Product Manager Pro</a><a href="https://chatgpt.com/g/g-69814e9cbf10819195db09856bf774e8-skills-author-for-intelligent-ai-tools" target="_blank" rel="noopener noreferrer">Skills Author for Intelligent AI Tools</a><a href="https://chatgpt.com/g/g-694a53798c308191880ce1a2e5b1d6d6-software-architecture-strategist" target="_blank" rel="noopener noreferrer">Software Architect Strategist</a><a href="https://chatgpt.com/g/g-694392a8e4cc81918e4eb7f97291dc1b-the-diagrammer" target="_blank" rel="noopener noreferrer">The Diagrammer</a><a href="https://chatgpt.com/g/g-69c248cc606c81919dc6910fca598d89-cheat-sheet-for-academics" target="_blank" rel="noopener noreferrer">Cheat Sheet for Academics</a></div>
+    </div>
+    <div class="column-card">
+      <div class="column-header check"><span>🔍</span> Check</div>
+      <div class="column-body" id="check"><a href="https://chatgpt.com/g/g-692a70869bf48191aa3be8bdb98548e1-comparison-intelligence-assistant" target="_blank" rel="noopener noreferrer">Comparison Intelligence Assistant</a><a href="https://chatgpt.com/g/g-696d7e08829081919be2f9670f1861b1-critique-gpt" target="_blank" rel="noopener noreferrer">Critique GPT</a><a href="https://chatgpt.com/g/g-6965bb6a154481919b5218f675104ec3-doc-troubleshooter" target="_blank" rel="noopener noreferrer">Doc Troubleshooter</a><a href="https://chatgpt.com/g/g-6969b030103c819181a2a2311b257dd4-document-validator" target="_blank" rel="noopener noreferrer">Document Validator</a><a href="https://chatgpt.com/g/g-696ca0983a008191a401f43888caec56-long-horizon-reasoner" target="_blank" rel="noopener noreferrer">Long Horizon Reasoner</a><a href="https://chatgpt.com/g/g-69672c2335448191b7c3c94cf6b7fc93-style-guide-generator" target="_blank" rel="noopener noreferrer">Style Guide Generator</a><a href="https://chatgpt.com/g/g-6919678dcb088191ba81c4f3f84fecd7-system-deep-dive-advisor" target="_blank" rel="noopener noreferrer">System Deep Dive Advisor</a><a href="https://chatgpt.com/g/g-69990b16030881919b6fe6b66b4dca3d-ui-ux-design-audit" target="_blank" rel="noopener noreferrer">UI UX Design Audit</a><a href="https://chatgpt.com/g/g-69b2cb4806e48191b2547856019a7eb2-debuggpt" target="_blank" rel="noopener noreferrer">DebugGPT</a><a href="https://chatgpt.com/g/g-69b4ae4a6dcc819198dba3b96e6d5e5f-ai-production-sentinel" target="_blank" rel="noopener noreferrer">AI Production Sentinel</a><a href="https://chatgpt.com/g/g-69b50102610481918b2169d7813780aa-scrumgpt" target="_blank" rel="noopener noreferrer">ScrumGPT</a></div>
+    </div>
+    <div class="column-card">
+      <div class="column-header act"><span>🚀</span> Act</div>
+      <div class="column-body" id="act"><a href="https://chatgpt.com/g/g-692bbfd4ae6c8191bfcf6559e839800a-architect-deliverables-generator" target="_blank" rel="noopener noreferrer">Architect Deliverables Generator</a><a href="https://chatgpt.com/g/g-6923ebee7d608191b0b06cffbc692a57-by-bms-enterprise-architecture-documenter" target="_blank" rel="noopener noreferrer">BY BMS Enterprise Architect GPT</a><a href="https://chatgpt.com/g/g-691ee93e9c1081918a2f8a6c18604cf9-copilot-spec-author" target="_blank" rel="noopener noreferrer">Copilot Spec Author</a><a href="https://chatgpt.com/g/g-6970567d0fac819181a96eb8ad69dcd7-jyotisha-decision-engine" target="_blank" rel="noopener noreferrer">Jyotisha Decision Engine</a><a href="https://chatgpt.com/g/g-6961d5779f048191a8b7b647c642f1cf-next-action-strategist" target="_blank" rel="noopener noreferrer">Next Action Strategist</a><a href="https://chatgpt.com/g/g-6963be5a19c881918afb52b222681774-prompt-enhancer" target="_blank" rel="noopener noreferrer">Prompt Enhancer</a><a href="https://chatgpt.com/g/g-69216d0767688191a7cf249b4bd0b47d-rpa-process-architect" target="_blank" rel="noopener noreferrer">RPA Process Architect</a><a href="https://chatgpt.com/g/g-697050c74b988191ad8977d476f0ad2f-suno-prompt-composer" target="_blank" rel="noopener noreferrer">Suno Prompt Composer</a><a href="https://chatgpt.com/g/g-692bd8003ab8819198faadf5b9e7b1e8-vibe-systems-architect" target="_blank" rel="noopener noreferrer">Vibe Systems Architect</a><a href="https://chatgpt.com/g/g-6928ebb321dc8191a1fb1cd86c75d16e-workload-prioritization-advisor" target="_blank" rel="noopener noreferrer">Workload Prioritization Advisor</a><a href="https://chatgpt.com/g/g-694029f4ed6081919e6794a50631adb3-mhjfommacsl" target="_blank" rel="noopener noreferrer">MHJFOMMACSL</a><a href="https://chatgpt.com/g/g-69d477c357688191b394134ef47155ea-pg-med-helper" target="_blank" rel="noopener noreferrer">PG Med Helper</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip" role="tooltip" style="left: 1846px; top: 602px; opacity: 0;"><h4>MHJFOMMACSL</h4>MHJFOMMACSL is a structured assistant that helps residents interpret and apply society governance rules based on official documents. It explains rights, duties, and compliance requirements using precise **Bye-Law** and **Elders Council** references. It also guides users through proper complaint procedures, dispute resolution pathways, and documentation requirements within the society framework. The assistant clarifies how internal mechanisms like the Elders Council function for grievance redressal . Additionally, it situates society rules within the broader framework of the Telangana Mutually Aided Co-operative Societies Act, 1995 . Responses are neutral, procedural, and designed for clarity—not legal advice or advocacy.</div>
+
+<div class="touch-tooltip" id="touchTooltip" role="dialog" aria-label="Agent details">
+  <button class="close-tip" onclick="closeTouchTip()" aria-label="Close">×</button>
+  <div id="touchTooltipContent"></div>
+</div>
+
+<button class="fab" onclick="openManager()" aria-label="Add or manage agents">+</button>
+
+<div class="modal-overlay active" id="modal" role="dialog" aria-modal="true" aria-label="Manage Custom GPTs">
+  <div class="modal-content">
+
+    <div class="modal-header">
+      <h3>Manage Custom GPTs</h3>
+      <button class="btn btn-secondary btn-sm" onclick="closeManager()">Close</button>
+    </div>
+
+    <div id="list"><div class="manage-row"><b>Agentic AI Blueprint</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Agentic AI Elicitation - Blueprint - Building Guide</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>AI Pathfinder</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Best Practices Engine</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Business Idea Market Fit Examiner</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Career Role Breakdown Assistant</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Competitor Vulnerability Scanner</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Data Engineer Analyst Scientist</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Enterprise Capability Strategist</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Enterprise Company Researcher</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Expert Learning Guide</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>GTM Strategist and Troubleshooter</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Industry Strategy Lab</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Intellectual Sparring Partner</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Knowledge Assistant</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Leverage Coach</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Market Researcher and Analyst</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Problem Framer Pro</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Project Program Portfolio Leader</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Proposal Engine GPT</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Meeting Action Extractor</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Brownfield Reverse Engineer</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>CodeMentor AI</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Consulting Deck Architect</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>CustomGPT Architect</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Greenfield Brownfield Vibe Coding Architect</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>HARADA Nano Banana Prompt GPT</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Senior Product Manager Pro</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Skills Author for Intelligent AI Tools</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Software Architect Strategist</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>The Diagrammer</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Cheat Sheet for Academics</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Comparison Intelligence Assistant</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Critique GPT</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Doc Troubleshooter</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Document Validator</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Long Horizon Reasoner</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Style Guide Generator</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>System Deep Dive Advisor</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>UI UX Design Audit</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>DebugGPT</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>AI Production Sentinel</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>ScrumGPT</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Architect Deliverables Generator</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>BY BMS Enterprise Architect GPT</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Copilot Spec Author</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Jyotisha Decision Engine</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Next Action Strategist</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Prompt Enhancer</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>RPA Process Architect</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Suno Prompt Composer</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Vibe Systems Architect</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>Workload Prioritization Advisor</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>MHJFOMMACSL</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div><div class="manage-row"><b>PG Med Helper</b><div class="manage-actions"><button class="btn btn-primary btn-sm">Edit</button><button class="btn btn-danger btn-sm">Delete</button></div></div></div>
+
+    <hr>
+
+    <label for="column" style="font-weight:600;font-size:.8125rem;display:block;margin-bottom:.25rem">Category</label>
+    <select id="column">
+      <option value="0">Plan</option>
+      <option value="1">Do</option>
+      <option value="2">Check</option>
+      <option value="3">Act</option>
+    </select>
+
+    <label for="name" style="font-weight:600;font-size:.8125rem;display:block;margin-bottom:.25rem">Name</label>
+    <input id="name" placeholder="GPT Name">
+
+    <label for="url" style="font-weight:600;font-size:.8125rem;display:block;margin-bottom:.25rem">URL</label>
+    <input id="url" placeholder="GPT URL" type="url">
+
+    <label for="desc" style="font-weight:600;font-size:.8125rem;display:block;margin-bottom:.25rem">Description</label>
+    <textarea id="desc" placeholder="Description"></textarea>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveGPT()">Save</button>
+      <button class="btn btn-secondary" onclick="cancelEdit()" id="cancelBtn" style="display:none">Cancel</button>
+    </div>
+
+    <hr>
+    <h4>Backup / Restore</h4>
+
+    <div class="backup-actions">
+      <button class="btn btn-primary btn-sm" onclick="exportJSON()">Export JSON</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">Import JSON</button>
+    </div>
+
+    <hr>
+    <h4>Share</h4>
+    <p style="font-size:.8rem;color:#6b7280;margin-bottom:.5rem">Bake all current agents into a self-contained HTML file anyone can open directly — no setup, no browser storage needed.</p>
+    <button class="btn btn-primary btn-sm" onclick="embedAndSave()" style="background:linear-gradient(135deg,#10b981,#059669)">💾 Embed &amp; Save File</button>
+
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "customGPT_registry_v2";
+/* REGISTRY_START */
+let registry = [
+  [
+    {
+      "name": "Agentic AI Blueprint",
+      "url": "https://chatgpt.com/g/g-69363ede2cc48191bfdb7ac7c55239d7-agentic-ai-elicitation-blueprint-building-guide",
+      "desc": "Guide for designing agentic AI architectures and systems."
+    },
+    {
+      "name": "Agentic AI Elicitation - Blueprint - Building Guide",
+      "url": "https://chatgpt.com/g/g-69363ede2cc48191bfdb7ac7c55239d7-agentic-ai-elicitation-blueprint-building-guide",
+      "desc": "CustomGPT/AI Agent enables creation of other AI Agents"
+    },
+    {
+      "name": "AI Pathfinder",
+      "url": "https://chatgpt.com/g/g-694f89acbfb08191a0d87dd74d57f270-ai-pathfinder",
+      "desc": "Identifies automation opportunities and AI transformation roadmaps."
+    },
+    {
+      "name": "Best Practices Engine",
+      "url": "https://chatgpt.com/g/g-6977fe98bec08191baad1b430e33ce89-best-practices-engine",
+      "desc": "Identifies execution risks and prevents common operational mistakes."
+    },
+    {
+      "name": "Business Idea Market Fit Examiner",
+      "url": "https://chatgpt.com/g/g-698f2f91a0608191b6c4bab1fc6e0424-business-idea-market-fit-examiner",
+      "desc": "This CustomGPT is a structured business idea validation engine. It rigorously pressure-tests concepts, assumptions, GTM plans, and product strategies using proven frameworks. It focuses on identifying risks, blind spots, and weak logic before resources are committed. It prioritizes fast, low-cost validation over narrative confidence.\nIt challenges assumptions directly and converts ideas into testable decisions. It exists to improve the quality of business thinking before execution begins."
+    },
+    {
+      "name": "Career Role Breakdown Assistant",
+      "url": "https://chatgpt.com/g/g-6919d057e3608191b2b2658ed2162956-career-role-breakdown-assistant",
+      "desc": "Breaks down job roles into tasks, skills, tools and career development paths."
+    },
+    {
+      "name": "Competitor Vulnerability Scanner",
+      "url": "https://chatgpt.com/g/g-691efedbe6148191a0a9d2dbff8b33a9-competitor-vulnerability-scanner",
+      "desc": "Analyzes competitors to reveal exploitable strategic weaknesses."
+    },
+    {
+      "name": "Data Engineer Analyst Scientist",
+      "url": "https://chatgpt.com/g/g-69759556774881918446062f447a5f97-data-engineer-analyst-scientist",
+      "desc": "This CustomGPT acts as a structured analytical copilot across data analysis, data engineering, and data science. It converts vague questions into well-defined, governance-safe analytical outputs. It enforces explicit assumptions, rejects ambiguity, and prevents metric misuse. It produces reusable artifacts suitable for humans and downstream systems. Its value is speed with rigor, clarity without speculation, and decisions without rework."
+    },
+    {
+      "name": "Enterprise Capability Strategist",
+      "url": "https://chatgpt.com/g/g-694f3156bc8081918a09fd2352dd64a0-enterprise-capability-strategist",
+      "desc": "Creates business capability maps and transformation priority models."
+    },
+    {
+      "name": "Enterprise Company Researcher",
+      "url": "https://chatgpt.com/g/g-6991ce766bec8191b40aa8271e055461-enterprise-company-researcher",
+      "desc": "Produces enterprise-level research and opportunity analysis."
+    },
+    {
+      "name": "Expert Learning Guide",
+      "url": "https://chatgpt.com/g/g-691dcf60167c8191ada538d8388419bf-expert-learning-guide",
+      "desc": "Structured learning assistant that guides users from fundamentals to advanced mastery."
+    },
+    {
+      "name": "GTM Strategist and Troubleshooter",
+      "url": "https://chatgpt.com/g/g-6976fa5cad2881918de8b5ef8a7f325f-gtm-strategist-and-troubleshooter",
+      "desc": "Diagnoses growth problems and designs corrective go-to-market strategies."
+    },
+    {
+      "name": "Industry Strategy Lab",
+      "url": "https://chatgpt.com/g/g-69196056bedc8191b752e4cb9dfd882c-industry-strategy-lab",
+      "desc": "Analyzes industries using structured frameworks and generates actionable strategic insights."
+    },
+    {
+      "name": "Intellectual Sparring Partner",
+      "url": "https://chatgpt.com/g/g-69743af49b708191b9cae5f15fbf27e6-intellectual-sparring-partner",
+      "desc": "Challenges assumptions and sharpens strategic thinking."
+    },
+    {
+      "name": "Knowledge Assistant",
+      "url": "https://chatgpt.com/g/g-69197811bdd48191962d863122fe1b6c-knowledge-assistant",
+      "desc": "Need a deep dive on any topic? This GPT gives you super accurate, structured, academic-grade info. Perfect for students, researchers, and pros who need facts without the fluff."
+    },
+    {
+      "name": "Leverage Coach",
+      "url": "https://chatgpt.com/g/g-697b12285fec8191a7c42926f376bbef-leverage-coach",
+      "desc": "Forces prioritization and high leverage decisions."
+    },
+    {
+      "name": "Market Researcher and Analyst",
+      "url": "https://chatgpt.com/g/g-691974d25fc48191894606d47d6065f0-market-researcher-and-analyst",
+      "desc": "Performs structured market analysis converting trends and signals into strategy."
+    },
+    {
+      "name": "Problem Framer Pro",
+      "url": "https://chatgpt.com/g/g-696db92537888191b381384242d88246-problem-framer-pro",
+      "desc": "Defines problems rigorously before solutioning to improve decision quality."
+    },
+    {
+      "name": "Project Program Portfolio Leader",
+      "url": "https://chatgpt.com/g/g-6976f54e7d448191ae00915975e0c9fa-project-program-portfolio-leader",
+      "desc": "Supports program and portfolio leadership using governance frameworks."
+    },
+    {
+      "name": "Proposal Engine GPT",
+      "url": "https://chatgpt.com/g/g-6940150b5550819181fef4024a730ef9-proposal-engine-gpt",
+      "desc": "Builds PMO compliant proposals and governance-ready project artifacts."
+    },
+    {
+      "name": "Meeting Action Extractor",
+      "url": "https://chatgpt.com/g/g-69ca31022c1c8191b7da33ec4ea782ab-meeting-action-extractor",
+      "desc": "This CustomGPT transforms raw meeting transcripts into structured execution artifacts that drive action. It isolates only what matters for execution: decisions, actions, risks, and unresolved questions. By enforcing strict qualification rules, it eliminates ambiguity and prevents misinterpretation. Teams gain clarity on ownership, alignment, and next steps without manual effort. It is designed for operational precision, not summarization. The result is faster, cleaner, and more accountable execution across any organization."
+    }
+  ],
+  [
+    {
+      "name": "Brownfield Reverse Engineer",
+      "url": "https://chatgpt.com/g/g-69a60cdcd22881919adc140a75b7c8f8-brownfield-reverse-engineer",
+      "desc": "Reconstructs legacy system architectures."
+    },
+    {
+      "name": "CodeMentor AI",
+      "url": "https://chatgpt.com/g/g-69197cd50fdc81918c073df675267d89-codementor-ai",
+      "desc": "Developer assistant for learning languages and frameworks."
+    },
+    {
+      "name": "Consulting Deck Architect",
+      "url": "https://chatgpt.com/g/g-69acd45fe9908191ad2db142fcd3f1f3-consulting-deck-architect",
+      "desc": "Creates consulting grade executive presentations."
+    },
+    {
+      "name": "CustomGPT Architect",
+      "url": "https://chatgpt.com/g/g-69647847978c819185a45772ddd6bf0d-customgpt-architect",
+      "desc": "Designs and structures CustomGPT architectures."
+    },
+    {
+      "name": "Greenfield Brownfield Vibe Coding Architect",
+      "url": "https://chatgpt.com/g/g-692c0cae04fc8191a9d78b49f114cdb2-greenfield-brownfield-vibe-coding-architect",
+      "desc": "Architects development environments for modern codebases."
+    },
+    {
+      "name": "HARADA Nano Banana Prompt GPT",
+      "url": "https://chatgpt.com/g/g-695dd693819c8191805c815fd71d62f5-harada-nano-banana-prompt-gpt",
+      "desc": "Generates Harada method planning prompts."
+    },
+    {
+      "name": "Senior Product Manager Pro",
+      "url": "https://chatgpt.com/g/g-692a5f6566908191b1af7dd07367d95b-senior-product-manager-pro",
+      "desc": "Full stack product management assistant."
+    },
+    {
+      "name": "Skills Author for Intelligent AI Tools",
+      "url": "https://chatgpt.com/g/g-69814e9cbf10819195db09856bf774e8-skills-author-for-intelligent-ai-tools",
+      "desc": "Creates deterministic AI skill specifications."
+    },
+    {
+      "name": "Software Architect Strategist",
+      "url": "https://chatgpt.com/g/g-694a53798c308191880ce1a2e5b1d6d6-software-architecture-strategist",
+      "desc": "Strategic assistant for architecture planning and system strategy."
+    },
+    {
+      "name": "The Diagrammer",
+      "url": "https://chatgpt.com/g/g-694392a8e4cc81918e4eb7f97291dc1b-the-diagrammer",
+      "desc": "Creates visual frameworks and diagram prompts."
+    },
+    {
+      "name": "Cheat Sheet for Academics",
+      "url": "https://chatgpt.com/g/g-69c248cc606c81919dc6910fca598d89-cheat-sheet-for-academics",
+      "desc": "This CustomGPT functions as a high-efficiency academic revision tool that converts raw study material into ultra-condensed, exam-ready cheat sheets. It structures content into fixed, formula-first templates to maximize recall speed and minimize cognitive load. It works across disciplines—STEM, economics, and humanities—adapting notation and compression style accordingly. The system filters out explanations, examples, and narrative, focusing only on definitions, laws, formulas, and key relationships. It is designed for rapid scanning (under 10 seconds per topic) and consistent output formatting. Additionally, it handles incomplete or messy input robustly by filling gaps using standard textbook knowledge while maintaining strict structural discipline ."
+    }
+  ],
+  [
+    {
+      "name": "Comparison Intelligence Assistant",
+      "url": "https://chatgpt.com/g/g-692a70869bf48191aa3be8bdb98548e1-comparison-intelligence-assistant",
+      "desc": "Structured side-by-side comparisons."
+    },
+    {
+      "name": "Critique GPT",
+      "url": "https://chatgpt.com/g/g-696d7e08829081919be2f9670f1861b1-critique-gpt",
+      "desc": "Evaluates outputs critically and identifies logical flaws."
+    },
+    {
+      "name": "Doc Troubleshooter",
+      "url": "https://chatgpt.com/g/g-6965bb6a154481919b5218f675104ec3-doc-troubleshooter",
+      "desc": "Diagnoses documentation issues and errors."
+    },
+    {
+      "name": "Document Validator",
+      "url": "https://chatgpt.com/g/g-6969b030103c819181a2a2311b257dd4-document-validator",
+      "desc": "Checks documents for compliance and completeness."
+    },
+    {
+      "name": "Long Horizon Reasoner",
+      "url": "https://chatgpt.com/g/g-696ca0983a008191a401f43888caec56-long-horizon-reasoner",
+      "desc": "Improves long term decision calibration."
+    },
+    {
+      "name": "Style Guide Generator",
+      "url": "https://chatgpt.com/g/g-69672c2335448191b7c3c94cf6b7fc93-style-guide-generator",
+      "desc": "Creates documentation and coding style guides."
+    },
+    {
+      "name": "System Deep Dive Advisor",
+      "url": "https://chatgpt.com/g/g-6919678dcb088191ba81c4f3f84fecd7-system-deep-dive-advisor",
+      "desc": "Analyzes systems, integrations and architecture."
+    },
+    {
+      "name": "UI UX Design Audit",
+      "url": "https://chatgpt.com/g/g-69990b16030881919b6fe6b66b4dca3d-ui-ux-design-audit",
+      "desc": "Evaluates user interfaces and experience quality."
+    },
+    {
+      "name": "DebugGPT",
+      "url": "https://chatgpt.com/g/g-69b2cb4806e48191b2547856019a7eb2-debuggpt",
+      "desc": "DebugGPT is a senior-level debugging assistant designed to help developers systematically diagnose and resolve software failures. It guides users through structured investigation processes including deterministic reproduction, hypothesis testing, log analysis, and root-cause identification. Instead of encouraging quick patches, it promotes disciplined debugging practices that lead to robust and lasting fixes. DebugGPT helps analyze stack traces, isolate minimal failing cases, investigate regressions, and validate fixes safely. It also encourages improved observability and automated testing to prevent future incidents. The result is faster resolution, more reliable systems, and stronger engineering practices."
+    },
+    {
+      "name": "AI Production Sentinel",
+      "url": "https://chatgpt.com/g/g-69b4ae4a6dcc819198dba3b96e6d5e5f-ai-production-sentinel",
+      "desc": "Enterprise AI Gatekeeper enforcing governance before production deployment. "
+    },
+    {
+      "name": "ScrumGPT",
+      "url": "https://chatgpt.com/g/g-69b50102610481918b2169d7813780aa-scrumgpt",
+      "desc": "ScrumGPT acts as a structured thinking partner for delivery professionals. It helps translate ambiguous delivery problems into clear insights, identify systemic risks, and propose practical next steps. By combining agile facilitation thinking with lightweight diagnostics and structured communication guidance, ScrumGPT helps teams move from confusion to clarity — faster. If you work in Agile delivery, program management, or team leadership, ScrumGPT can help you spend less time untangling problems and more time moving delivery forward."
+    }
+  ],
+  [
+    {
+      "name": "Architect Deliverables Generator",
+      "url": "https://chatgpt.com/g/g-692bbfd4ae6c8191bfcf6559e839800a-architect-deliverables-generator",
+      "desc": "Creates enterprise architecture deliverables."
+    },
+    {
+      "name": "BY BMS Enterprise Architect GPT",
+      "url": "https://chatgpt.com/g/g-6923ebee7d608191b0b06cffbc692a57-by-bms-enterprise-architecture-documenter",
+      "desc": "Enables generation of documentation for the Enterprise Architect for the Blue Yonder Billing Management Ecosystem for any client implementations. "
+    },
+    {
+      "name": "Copilot Spec Author",
+      "url": "https://chatgpt.com/g/g-691ee93e9c1081918a2f8a6c18604cf9-copilot-spec-author",
+      "desc": "Creates engineering specs and documentation."
+    },
+    {
+      "name": "Jyotisha Decision Engine",
+      "url": "https://chatgpt.com/g/g-6970567d0fac819181a96eb8ad69dcd7-jyotisha-decision-engine",
+      "desc": "Astrological decision assistance."
+    },
+    {
+      "name": "Next Action Strategist",
+      "url": "https://chatgpt.com/g/g-6961d5779f048191a8b7b647c642f1cf-next-action-strategist",
+      "desc": "Identifies highest leverage next steps."
+    },
+    {
+      "name": "Prompt Enhancer",
+      "url": "https://chatgpt.com/g/g-6963be5a19c881918afb52b222681774-prompt-enhancer",
+      "desc": "Improves prompts for clarity and precision."
+    },
+    {
+      "name": "RPA Process Architect",
+      "url": "https://chatgpt.com/g/g-69216d0767688191a7cf249b4bd0b47d-rpa-process-architect",
+      "desc": "Designs robotic process automation workflows."
+    },
+    {
+      "name": "Suno Prompt Composer",
+      "url": "https://chatgpt.com/g/g-697050c74b988191ad8977d476f0ad2f-suno-prompt-composer",
+      "desc": "Creates prompts for Suno AI music generation."
+    },
+    {
+      "name": "Vibe Systems Architect",
+      "url": "https://chatgpt.com/g/g-692bd8003ab8819198faadf5b9e7b1e8-vibe-systems-architect",
+      "desc": "Transforms product ideas into system architectures."
+    },
+    {
+      "name": "Workload Prioritization Advisor",
+      "url": "https://chatgpt.com/g/g-6928ebb321dc8191a1fb1cd86c75d16e-workload-prioritization-advisor",
+      "desc": "Prioritizes tasks using structured scoring."
+    },
+    {
+      "name": "MHJFOMMACSL",
+      "url": "https://chatgpt.com/g/g-694029f4ed6081919e6794a50631adb3-mhjfommacsl",
+      "desc": "MHJFOMMACSL is a structured assistant that helps residents interpret and apply society governance rules based on official documents. It explains rights, duties, and compliance requirements using precise **Bye-Law** and **Elders Council** references. It also guides users through proper complaint procedures, dispute resolution pathways, and documentation requirements within the society framework. The assistant clarifies how internal mechanisms like the Elders Council function for grievance redressal . Additionally, it situates society rules within the broader framework of the Telangana Mutually Aided Co-operative Societies Act, 1995 . Responses are neutral, procedural, and designed for clarity—not legal advice or advocacy."
+    },
+    {
+      "name": "PG Med Helper",
+      "url": "https://chatgpt.com/g/g-69d477c357688191b394134ef47155ea-pg-med-helper",
+      "desc": "This CustomGPT serves as an expert academic assistant for postgraduate medical trainees, especially in India. It helps you create complete, ready-to-use academic deliverables such as case presentations, seminars, journal clubs, theses, and research papers. It provides structured slide outlines, speaking scripts, evidence-based content, and viva preparation. It aligns recommendations with current guidelines (NMC, ICMR, WHO, specialty societies) and real clinical workflows. It also supports research design, audits, and publication planning. Overall, it reduces your workload by handling end-to-end academic and clinical preparation efficiently."
+    }
+  ]
+];
+/* REGISTRY_END */
+let editing = null;
+const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+
+/* ── Tooltip (desktop: hover | mobile: tap bottom-sheet) ── */
+function tip(e, title, text) {
+  if (isTouch) return;
+  const t = document.getElementById("tooltip");
+  t.innerHTML = "<h4>" + escHtml(title) + "</h4>" + escHtml(text);
+  const x = e.clientX, y = e.clientY;
+  const pad = 16;
+  let left = x + pad, top = y + pad;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  if (left + 320 > vw) left = x - 320 - pad;
+  if (top + 200 > vh) top = y - 200 - pad;
+  if (left < 8) left = 8;
+  if (top < 8) top = 8;
+  t.style.left = left + "px";
+  t.style.top = top + "px";
+  t.style.opacity = 1;
+}
+function hideTip() { document.getElementById("tooltip").style.opacity = 0; }
+
+function showTouchTip(title, text) {
+  const el = document.getElementById("touchTooltip");
+  document.getElementById("touchTooltipContent").innerHTML =
+    "<h4>" + escHtml(title) + "</h4><p>" + escHtml(text) + "</p>";
+  el.classList.add("active");
+}
+function closeTouchTip() {
+  document.getElementById("touchTooltip").classList.remove("active");
+}
+
+function escHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s || "";
+  return d.innerHTML;
+}
+
+/* ── State ──────────────────────────────────────────── */
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(registry)); }
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { registry = JSON.parse(raw); }
+  } catch (e) { /* corrupt data — keep defaults */ }
+}
+
+/* ── Render ─────────────────────────────────────────── */
+function render() {
+  const search = document.getElementById("search").value.toLowerCase();
+  const cells = ["plan", "do", "check", "act"];
+
+  cells.forEach(function(id, c) {
+    const el = document.getElementById(id);
+    el.innerHTML = "";
+    const filtered = registry[c].filter(function(g) {
+      return g.name.toLowerCase().includes(search);
+    });
+
+    if (filtered.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = search ? "No matches" : "No agents yet";
+      el.appendChild(empty);
+      return;
+    }
+
+    filtered.forEach(function(g) {
+      var a = document.createElement("a");
+      a.href = g.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = g.name;
+
+      if (isTouch) {
+        a.addEventListener("contextmenu", function(e) {
+          e.preventDefault();
+          showTouchTip(g.name, g.desc);
+        });
+        a.title = g.desc || "";
+      } else {
+        a.onmousemove = function(e) { tip(e, g.name, g.desc); };
+        a.onmouseleave = hideTip;
+      }
+
+      el.appendChild(a);
+    });
+  });
+}
+
+/* ── Sort ───────────────────────────────────────────── */
+function sortAgents() {
+  registry.forEach(function(col) { col.sort(function(a, b) { return a.name.localeCompare(b.name); }); });
+  saveState();
+  render();
+}
+
+/* ── Modal ──────────────────────────────────────────── */
+function openManager() {
+  document.getElementById("modal").classList.add("active");
+  document.body.style.overflow = "hidden";
+  refreshManager();
+}
+function closeManager() {
+  document.getElementById("modal").classList.remove("active");
+  document.body.style.overflow = "";
+  cancelEdit();
+}
+
+document.addEventListener("click", function(e) {
+  if (e.target.id === "modal") closeManager();
+});
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") {
+    closeManager();
+    closeTouchTip();
+  }
+});
+
+function refreshManager() {
+  var list = document.getElementById("list");
+  list.innerHTML = "";
+  var hasItems = false;
+
+  registry.forEach(function(col, c) {
+    col.forEach(function(g, i) {
+      hasItems = true;
+      var row = document.createElement("div");
+      row.className = "manage-row";
+
+      var nameEl = document.createElement("b");
+      nameEl.textContent = g.name;
+
+      var actions = document.createElement("div");
+      actions.className = "manage-actions";
+
+      var editBtn = document.createElement("button");
+      editBtn.className = "btn btn-primary btn-sm";
+      editBtn.textContent = "Edit";
+      editBtn.onclick = function() { editGPT(c, i); };
+
+      var delBtn = document.createElement("button");
+      delBtn.className = "btn btn-danger btn-sm";
+      delBtn.textContent = "Delete";
+      delBtn.onclick = function() { deleteGPT(c, i); };
+
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
+      row.appendChild(nameEl);
+      row.appendChild(actions);
+      list.appendChild(row);
+    });
+  });
+
+  if (!hasItems) {
+    var empty = document.createElement("div");
+    empty.className = "manage-empty";
+    empty.textContent = "No agents added yet. Use the form below to add one.";
+    list.appendChild(empty);
+  }
+}
+
+/* ── CRUD ───────────────────────────────────────────── */
+function editGPT(c, i) {
+  var g = registry[c][i];
+  document.getElementById("name").value = g.name;
+  document.getElementById("url").value = g.url;
+  document.getElementById("desc").value = g.desc;
+  document.getElementById("column").value = c;
+  document.getElementById("cancelBtn").style.display = "";
+  editing = { c: c, i: i };
+  document.getElementById("name").focus();
+}
+
+function cancelEdit() {
+  editing = null;
+  document.getElementById("name").value = "";
+  document.getElementById("url").value = "";
+  document.getElementById("desc").value = "";
+  document.getElementById("cancelBtn").style.display = "none";
+}
+
+function deleteGPT(c, i) {
+  var name = registry[c][i].name;
+  if (!confirm('Delete "' + name + '"?')) return;
+  registry[c].splice(i, 1);
+  saveState();
+  render();
+  refreshManager();
+}
+
+function saveGPT() {
+  var name = document.getElementById("name").value.trim();
+  var url = document.getElementById("url").value.trim();
+  var desc = document.getElementById("desc").value.trim();
+  var col = parseInt(document.getElementById("column").value);
+
+  if (!name || !url) {
+    alert("Name and URL are required.");
+    return;
+  }
+
+  if (editing) {
+    registry[editing.c].splice(editing.i, 1);
+    registry[col].push({ name: name, url: url, desc: desc });
+    editing = null;
+    document.getElementById("cancelBtn").style.display = "none";
+  } else {
+    registry[col].push({ name: name, url: url, desc: desc });
+  }
+
+  document.getElementById("name").value = "";
+  document.getElementById("url").value = "";
+  document.getElementById("desc").value = "";
+
+  saveState();
+  render();
+  refreshManager();
+}
+
+/* ── Import / Export ────────────────────────────────── */
+function exportJSON() {
+  var blob = new Blob([JSON.stringify(registry, null, 2)], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "custom_gpt_backup.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJSON(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function() {
+    try {
+      var parsed = JSON.parse(reader.result);
+      if (Array.isArray(parsed) && parsed.length === 4) {
+        registry = parsed;
+        saveState();
+        render();
+        refreshManager();
+      } else {
+        alert("Invalid backup format.");
+      }
+    } catch (err) {
+      alert("Failed to parse JSON file.");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+}
+
+/* ── Embed & Save ───────────────────────────────────── */
+function embedAndSave() {
+  var html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+  var registryJSON = "let registry = " + JSON.stringify(registry, null, 2) + ";";
+  html = html.replace(
+    /\/\* REGISTRY_START \*\/[\s\S]*?\/\* REGISTRY_END \*\//,
+    "/* REGISTRY_START */\n" + registryJSON + "\n/* REGISTRY_END */"
+  );
+  var blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "RajaJeevanKMaduri_CustomGPTs_AIAgents.html";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ── Init ───────────────────────────────────────────── */
+window.addEventListener("DOMContentLoaded", function() {
+  loadState();
+  render();
+});
+</script>
+
+
+
+</body></html>

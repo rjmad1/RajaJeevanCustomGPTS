@@ -1,0 +1,297 @@
+[
+  {
+    "category": "plan",
+    "agents": [
+      {
+        "name": "Agentic AI Blueprint",
+        "url": "https://chatgpt.com/g/g-69363ede2cc48191bfdb7ac7c55239d7-agentic-ai-elicitation-blueprint-building-guide",
+        "desc": "Guide for designing agentic AI architectures and systems."
+      },
+      {
+        "name": "Agentic AI Elicitation - Blueprint - Building Guide",
+        "url": "https://chatgpt.com/g/g-69363ede2cc48191bfdb7ac7c55239d7-agentic-ai-elicitation-blueprint-building-guide",
+        "desc": "CustomGPT/AI Agent enables creation of other AI Agents"
+      },
+      {
+        "name": "AI Pathfinder",
+        "url": "https://chatgpt.com/g/g-694f89acbfb08191a0d87dd74d57f270-ai-pathfinder",
+        "desc": "Identifies automation opportunities and AI transformation roadmaps."
+      },
+      {
+        "name": "Best Practices Engine",
+        "url": "https://chatgpt.com/g/g-6977fe98bec08191baad1b430e33ce89-best-practices-engine",
+        "desc": "Identifies execution risks and prevents common operational mistakes."
+      },
+      {
+        "name": "Business Idea Market Fit Examiner",
+        "url": "https://chatgpt.com/g/g-698f2f91a0608191b6c4bab1fc6e0424-business-idea-market-fit-examiner",
+        "desc": "This CustomGPT is a structured business idea validation engine. It rigorously pressure-tests concepts, assumptions, GTM plans, and product strategies using proven frameworks. It focuses on identifying risks, blind spots, and weak logic before resources are committed. It prioritizes fast, low-cost validation over narrative confidence.\nIt challenges assumptions directly and converts ideas into testable decisions. It exists to improve the quality of business thinking before execution begins."
+      },
+      {
+        "name": "Career Role Breakdown Assistant",
+        "url": "https://chatgpt.com/g/g-6919d057e3608191b2b2658ed2162956-career-role-breakdown-assistant",
+        "desc": "Breaks down job roles into tasks, skills, tools and career development paths."
+      },
+      {
+        "name": "Competitor Vulnerability Scanner",
+        "url": "https://chatgpt.com/g/g-691efedbe6148191a0a9d2dbff8b33a9-competitor-vulnerability-scanner",
+        "desc": "Analyzes competitors to reveal exploitable strategic weaknesses."
+      },
+      {
+        "name": "Data Engineer Analyst Scientist",
+        "url": "https://chatgpt.com/g/g-69759556774881918446062f447a5f97-data-engineer-analyst-scientist",
+        "desc": "This CustomGPT acts as a structured analytical copilot across data analysis, data engineering, and data science. It converts vague questions into well-defined, governance-safe analytical outputs. It enforces explicit assumptions, rejects ambiguity, and prevents metric misuse. It produces reusable artifacts suitable for humans and downstream systems. Its value is speed with rigor, clarity without speculation, and decisions without rework."
+      },
+      {
+        "name": "Enterprise Capability Strategist",
+        "url": "https://chatgpt.com/g/g-694f3156bc8081918a09fd2352dd64a0-enterprise-capability-strategist",
+        "desc": "Creates business capability maps and transformation priority models."
+      },
+      {
+        "name": "Enterprise Company Researcher",
+        "url": "https://chatgpt.com/g/g-6991ce766bec8191b40aa8271e055461-enterprise-company-researcher",
+        "desc": "Produces enterprise-level research and opportunity analysis."
+      },
+      {
+        "name": "Expert Learning Guide",
+        "url": "https://chatgpt.com/g/g-691dcf60167c8191ada538d8388419bf-expert-learning-guide",
+        "desc": "Structured learning assistant that guides users from fundamentals to advanced mastery."
+      },
+      {
+        "name": "GTM Strategist and Troubleshooter",
+        "url": "https://chatgpt.com/g/g-6976fa5cad2881918de8b5ef8a7f325f-gtm-strategist-and-troubleshooter",
+        "desc": "Diagnoses growth problems and designs corrective go-to-market strategies."
+      },
+      {
+        "name": "Industry Strategy Lab",
+        "url": "https://chatgpt.com/g/g-69196056bedc8191b752e4cb9dfd882c-industry-strategy-lab",
+        "desc": "Analyzes industries using structured frameworks and generates actionable strategic insights."
+      },
+      {
+        "name": "Intellectual Sparring Partner",
+        "url": "https://chatgpt.com/g/g-69743af49b708191b9cae5f15fbf27e6-intellectual-sparring-partner",
+        "desc": "Challenges assumptions and sharpens strategic thinking."
+      },
+      {
+        "name": "Knowledge Assistant",
+        "url": "https://chatgpt.com/g/g-69197811bdd48191962d863122fe1b6c-knowledge-assistant",
+        "desc": "Need a deep dive on any topic? This GPT gives you super accurate, structured, academic-grade info. Perfect for students, researchers, and pros who need facts without the fluff."
+      },
+      {
+        "name": "Leverage Coach",
+        "url": "https://chatgpt.com/g/g-697b12285fec8191a7c42926f376bbef-leverage-coach",
+        "desc": "Forces prioritization and high leverage decisions."
+      },
+      {
+        "name": "Market Researcher and Analyst",
+        "url": "https://chatgpt.com/g/g-691974d25fc48191894606d47d6065f0-market-researcher-and-analyst",
+        "desc": "Performs structured market analysis converting trends and signals into strategy."
+      },
+      {
+        "name": "Problem Framer Pro",
+        "url": "https://chatgpt.com/g/g-696db92537888191b381384242d88246-problem-framer-pro",
+        "desc": "Defines problems rigorously before solutioning to improve decision quality."
+      },
+      {
+        "name": "Project Program Portfolio Leader",
+        "url": "https://chatgpt.com/g/g-6976f54e7d448191ae00915975e0c9fa-project-program-portfolio-leader",
+        "desc": "Supports program and portfolio leadership using governance frameworks."
+      },
+      {
+        "name": "Proposal Engine GPT",
+        "url": "https://chatgpt.com/g/g-6940150b5550819181fef4024a730ef9-proposal-engine-gpt",
+        "desc": "Builds PMO compliant proposals and governance-ready project artifacts."
+      },
+      {
+        "name": "Meeting Action Extractor",
+        "url": "https://chatgpt.com/g/g-69ca31022c1c8191b7da33ec4ea782ab-meeting-action-extractor",
+        "desc": "This CustomGPT transforms raw meeting transcripts into structured execution artifacts that drive action. It isolates only what matters for execution: decisions, actions, risks, and unresolved questions. By enforcing strict qualification rules, it eliminates ambiguity and prevents misinterpretation. Teams gain clarity on ownership, alignment, and next steps without manual effort. It is designed for operational precision, not summarization. The result is faster, cleaner, and more accountable execution across any organization."
+      }
+    ]
+  },
+  {
+    "category": "do",
+    "agents": [
+      {
+        "name": "Brownfield Reverse Engineer",
+        "url": "https://chatgpt.com/g/g-69a60cdcd22881919adc140a75b7c8f8-brownfield-reverse-engineer",
+        "desc": "Reconstructs legacy system architectures."
+      },
+      {
+        "name": "CodeMentor AI",
+        "url": "https://chatgpt.com/g/g-69197cd50fdc81918c073df675267d89-codementor-ai",
+        "desc": "Developer assistant for learning languages and frameworks."
+      },
+      {
+        "name": "Consulting Deck Architect",
+        "url": "https://chatgpt.com/g/g-69acd45fe9908191ad2db142fcd3f1f3-consulting-deck-architect",
+        "desc": "Creates consulting grade executive presentations."
+      },
+      {
+        "name": "CustomGPT Architect",
+        "url": "https://chatgpt.com/g/g-69647847978c819185a45772ddd6bf0d-customgpt-architect",
+        "desc": "Designs and structures CustomGPT architectures."
+      },
+      {
+        "name": "Greenfield Brownfield Vibe Coding Architect",
+        "url": "https://chatgpt.com/g/g-692c0cae04fc8191a9d78b49f114cdb2-greenfield-brownfield-vibe-coding-architect",
+        "desc": "Architects development environments for modern codebases."
+      },
+      {
+        "name": "HARADA Nano Banana Prompt GPT",
+        "url": "https://chatgpt.com/g/g-695dd693819c8191805c815fd71d62f5-harada-nano-banana-prompt-gpt",
+        "desc": "Generates Harada method planning prompts."
+      },
+      {
+        "name": "Senior Product Manager Pro",
+        "url": "https://chatgpt.com/g/g-692a5f6566908191b1af7dd07367d95b-senior-product-manager-pro",
+        "desc": "Full stack product management assistant."
+      },
+      {
+        "name": "Skills Author for Intelligent AI Tools",
+        "url": "https://chatgpt.com/g/g-69814e9cbf10819195db09856bf774e8-skills-author-for-intelligent-ai-tools",
+        "desc": "Creates deterministic AI skill specifications."
+      },
+      {
+        "name": "Software Architect Strategist",
+        "url": "https://chatgpt.com/g/g-694a53798c308191880ce1a2e5b1d6d6-software-architecture-strategist",
+        "desc": "Strategic assistant for architecture planning and system strategy."
+      },
+      {
+        "name": "The Diagrammer",
+        "url": "https://chatgpt.com/g/g-694392a8e4cc81918e4eb7f97291dc1b-the-diagrammer",
+        "desc": "Creates visual frameworks and diagram prompts."
+      },
+      {
+        "name": "Cheat Sheet for Academics",
+        "url": "https://chatgpt.com/g/g-69c248cc606c81919dc6910fca598d89-cheat-sheet-for-academics",
+        "desc": "This CustomGPT functions as a high-efficiency academic revision tool that converts raw study material into ultra-condensed, exam-ready cheat sheets. It structures content into fixed, formula-first templates to maximize recall speed and minimize cognitive load. It works across disciplines—STEM, economics, and humanities—adapting notation and compression style accordingly. The system filters out explanations, examples, and narrative, focusing only on definitions, laws, formulas, and key relationships. It is designed for rapid scanning (under 10 seconds per topic) and consistent output formatting. Additionally, it handles incomplete or messy input robustly by filling gaps using standard textbook knowledge while maintaining strict structural discipline ."
+      }
+    ]
+  },
+  {
+    "category": "check",
+    "agents": [
+      {
+        "name": "Comparison Intelligence Assistant",
+        "url": "https://chatgpt.com/g/g-692a70869bf48191aa3be8bdb98548e1-comparison-intelligence-assistant",
+        "desc": "Structured side-by-side comparisons."
+      },
+      {
+        "name": "Critique GPT",
+        "url": "https://chatgpt.com/g/g-696d7e08829081919be2f9670f1861b1-critique-gpt",
+        "desc": "Evaluates outputs critically and identifies logical flaws."
+      },
+      {
+        "name": "Doc Troubleshooter",
+        "url": "https://chatgpt.com/g/g-6965bb6a154481919b5218f675104ec3-doc-troubleshooter",
+        "desc": "Diagnoses documentation issues and errors."
+      },
+      {
+        "name": "Document Validator",
+        "url": "https://chatgpt.com/g/g-6969b030103c819181a2a2311b257dd4-document-validator",
+        "desc": "Checks documents for compliance and completeness."
+      },
+      {
+        "name": "Long Horizon Reasoner",
+        "url": "https://chatgpt.com/g/g-696ca0983a008191a401f43888caec56-long-horizon-reasoner",
+        "desc": "Improves long term decision calibration."
+      },
+      {
+        "name": "Style Guide Generator",
+        "url": "https://chatgpt.com/g/g-69672c2335448191b7c3c94cf6b7fc93-style-guide-generator",
+        "desc": "Creates documentation and coding style guides."
+      },
+      {
+        "name": "System Deep Dive Advisor",
+        "url": "https://chatgpt.com/g/g-6919678dcb088191ba81c4f3f84fecd7-system-deep-dive-advisor",
+        "desc": "Analyzes systems, integrations and architecture."
+      },
+      {
+        "name": "UI UX Design Audit",
+        "url": "https://chatgpt.com/g/g-69990b16030881919b6fe6b66b4dca3d-ui-ux-design-audit",
+        "desc": "Evaluates user interfaces and experience quality."
+      },
+      {
+        "name": "DebugGPT",
+        "url": "https://chatgpt.com/g/g-69b2cb4806e48191b2547856019a7eb2-debuggpt",
+        "desc": "DebugGPT is a senior-level debugging assistant designed to help developers systematically diagnose and resolve software failures. It guides users through structured investigation processes including deterministic reproduction, hypothesis testing, log analysis, and root-cause identification. Instead of encouraging quick patches, it promotes disciplined debugging practices that lead to robust and lasting fixes. DebugGPT helps analyze stack traces, isolate minimal failing cases, investigate regressions, and validate fixes safely. It also encourages improved observability and automated testing to prevent future incidents. The result is faster resolution, more reliable systems, and stronger engineering practices."
+      },
+      {
+        "name": "AI Production Sentinel",
+        "url": "https://chatgpt.com/g/g-69b4ae4a6dcc819198dba3b96e6d5e5f-ai-production-sentinel",
+        "desc": "Enterprise AI Gatekeeper enforcing governance before production deployment. "
+      },
+      {
+        "name": "ScrumGPT",
+        "url": "https://chatgpt.com/g/g-69b50102610481918b2169d7813780aa-scrumgpt",
+        "desc": "ScrumGPT acts as a structured thinking partner for delivery professionals. It helps translate ambiguous delivery problems into clear insights, identify systemic risks, and propose practical next steps. By combining agile facilitation thinking with lightweight diagnostics and structured communication guidance, ScrumGPT helps teams move from confusion to clarity — faster. If you work in Agile delivery, program management, or team leadership, ScrumGPT can help you spend less time untangling problems and more time moving delivery forward."
+      }
+    ]
+  },
+  {
+    "category": "act",
+    "agents": [
+      {
+        "name": "Architect Deliverables Generator",
+        "url": "https://chatgpt.com/g/g-692bbfd4ae6c8191bfcf6559e839800a-architect-deliverables-generator",
+        "desc": "Creates enterprise architecture deliverables."
+      },
+      {
+        "name": "BY BMS Enterprise Architect GPT",
+        "url": "https://chatgpt.com/g/g-6923ebee7d608191b0b06cffbc692a57-by-bms-enterprise-architecture-documenter",
+        "desc": "Enables generation of documentation for the Enterprise Architect for the Blue Yonder Billing Management Ecosystem for any client implementations. "
+      },
+      {
+        "name": "Copilot Spec Author",
+        "url": "https://chatgpt.com/g/g-691ee93e9c1081918a2f8a6c18604cf9-copilot-spec-author",
+        "desc": "Creates engineering specs and documentation."
+      },
+      {
+        "name": "Jyotisha Decision Engine",
+        "url": "https://chatgpt.com/g/g-6970567d0fac819181a96eb8ad69dcd7-jyotisha-decision-engine",
+        "desc": "Astrological decision assistance."
+      },
+      {
+        "name": "Next Action Strategist",
+        "url": "https://chatgpt.com/g/g-6961d5779f048191a8b7b647c642f1cf-next-action-strategist",
+        "desc": "Identifies highest leverage next steps."
+      },
+      {
+        "name": "Prompt Enhancer",
+        "url": "https://chatgpt.com/g/g-6963be5a19c881918afb52b222681774-prompt-enhancer",
+        "desc": "Improves prompts for clarity and precision."
+      },
+      {
+        "name": "RPA Process Architect",
+        "url": "https://chatgpt.com/g/g-69216d0767688191a7cf249b4bd0b47d-rpa-process-architect",
+        "desc": "Designs robotic process automation workflows."
+      },
+      {
+        "name": "Suno Prompt Composer",
+        "url": "https://chatgpt.com/g/g-697050c74b988191ad8977d476f0ad2f-suno-prompt-composer",
+        "desc": "Creates prompts for Suno AI music generation."
+      },
+      {
+        "name": "Vibe Systems Architect",
+        "url": "https://chatgpt.com/g/g-692bd8003ab8819198faadf5b9e7b1e8-vibe-systems-architect",
+        "desc": "Transforms product ideas into system architectures."
+      },
+      {
+        "name": "Workload Prioritization Advisor",
+        "url": "https://chatgpt.com/g/g-6928ebb321dc8191a1fb1cd86c75d16e-workload-prioritization-advisor",
+        "desc": "Prioritizes tasks using structured scoring."
+      },
+      {
+        "name": "MHJFOMMACSL",
+        "url": "https://chatgpt.com/g/g-694029f4ed6081919e6794a50631adb3-mhjfommacsl",
+        "desc": "MHJFOMMACSL is a structured assistant that helps residents interpret and apply society governance rules based on official documents. It explains rights, duties, and compliance requirements using precise **Bye-Law** and **Elders Council** references. It also guides users through proper complaint procedures, dispute resolution pathways, and documentation requirements within the society framework. The assistant clarifies how internal mechanisms like the Elders Council function for grievance redressal . Additionally, it situates society rules within the broader framework of the Telangana Mutually Aided Co-operative Societies Act, 1995 . Responses are neutral, procedural, and designed for clarity—not legal advice or advocacy."
+      },
+      {
+        "name": "PG Med Helper",
+        "url": "https://chatgpt.com/g/g-69d477c357688191b394134ef47155ea-pg-med-helper",
+        "desc": "This CustomGPT serves as an expert academic assistant for postgraduate medical trainees, especially in India. It helps you create complete, ready-to-use academic deliverables such as case presentations, seminars, journal clubs, theses, and research papers. It provides structured slide outlines, speaking scripts, evidence-based content, and viva preparation. It aligns recommendations with current guidelines (NMC, ICMR, WHO, specialty societies) and real clinical workflows. It also supports research design, audits, and publication planning. Overall, it reduces your workload by handling end-to-end academic and clinical preparation efficiently."
+      }
+    ]
+  }
+]

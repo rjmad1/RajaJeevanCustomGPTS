@@ -1,0 +1,30 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+lib/
+
+# Firebase Cache
+.firebase/
+firebase-debug.log
+firestore-debug.log
+pubsub-debug.log
+ui-debug.log
+functions-debug.log
+database-debug.log
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+
+# OS files
+.DS_Store
+Thumbs.db
