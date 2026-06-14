@@ -8,7 +8,7 @@ import Admin from './pages/Admin';
 
 // Route guard for authenticated and approved users
 const ApprovedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, logout } = useAuth();
 
   if (loading) {
     return (
@@ -42,6 +42,41 @@ const ApprovedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <p className="text-slate-600 dark:text-slate-400 max-w-md">Your account has been suspended. Please contact the administrator for support.</p>
       </div>
     );
+  }
+
+  // Check access expiration for normal users
+  if (profile.role !== 'super_admin' && profile.role !== 'admin' && profile.accessExpiresAt) {
+    let expiryMillis = 0;
+    if (profile.accessExpiresAt.seconds) {
+      expiryMillis = profile.accessExpiresAt.seconds * 1000;
+    } else if (profile.accessExpiresAt.toDate) {
+      expiryMillis = profile.accessExpiresAt.toDate().getTime();
+    } else {
+      expiryMillis = new Date(profile.accessExpiresAt).getTime();
+    }
+    
+    if (expiryMillis < Date.now()) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-50 dark:bg-slate-950 text-center">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-amber-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Access Pass Expired</h1>
+          <p className="text-slate-600 dark:text-slate-400 max-w-md mb-6">
+            Your temporary privilege pass to access this directory expired on <strong>{new Date(expiryMillis).toLocaleString()}</strong>.
+            Please contact the administrator (rajajeevankumar@gmail.com) to renew your pass.
+          </p>
+          <button
+            onClick={() => logout()}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-xl shadow-md transition-colors"
+          >
+            Sign Out
+          </button>
+        </div>
+      );
+    }
   }
 
   return <>{children}</>;

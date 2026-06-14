@@ -6,6 +6,7 @@ export interface UserProfile {
   status: 'pending_approval' | 'approved' | 'suspended';
   createdAt?: any;
   lastLogin?: any;
+  accessExpiresAt?: any;
 }
 
 export interface Category {
@@ -43,6 +44,7 @@ export interface AccessCode {
   redeemedBy?: string;
   redeemedEmail?: string;
   redeemedAt?: any;
+  accessDuration?: '1_month' | '3_months' | '1_year';
 }
 
 export interface AuditLog {

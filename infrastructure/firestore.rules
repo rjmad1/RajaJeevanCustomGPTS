@@ -17,7 +17,8 @@ service cloud.firestore {
     function isApproved() {
       return isAuthenticated() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserData().status == 'approved';
+             getUserData().status == 'approved' &&
+             (!('accessExpiresAt' in getUserData()) || getUserData().accessExpiresAt > request.time);
     }
     
     // Helper: Is the user an admin or super_admin?
@@ -32,17 +33,23 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       
       // Creating profiles: Users can write their own profile during registration (done via functions but good to have fallback).
-      // However, roles and status are restricted to prevent self-elevation.
+      // However, roles and status are restricted to prevent self-elevation. Only rajajeevankumar@gmail.com can be elevated.
       allow create: if isAuthenticated() && request.auth.uid == userId && 
-                    (!request.resource.data.keys().hasAll(['role', 'status']) || 
-                     (request.resource.data.role == 'authorized_user' && request.resource.data.status == 'pending_approval'));
-                     
+                    (!request.resource.data.keys().hasAny(['role', 'status']) || 
+                     ((request.resource.data.role == 'authorized_user' || request.resource.data.email == 'rajajeevankumar@gmail.com') && 
+                      (request.resource.data.status == 'pending_approval' || request.resource.data.status == 'approved')));
+                      
       // Updating profiles: Admins can update any profile. Users can only update their own name or lastLogin.
-      allow update: if isAdmin() || 
+      // Roles are locked down: Only rajajeevankumar@gmail.com can be elevated.
+      allow update: if (isAdmin() && 
+                       (!request.resource.data.keys().hasAny(['role']) || 
+                        request.resource.data.role == resource.data.role ||
+                        request.resource.data.role == 'authorized_user' ||
+                        ((request.resource.data.role == 'admin' || request.resource.data.role == 'super_admin') && request.resource.data.email == 'rajajeevankumar@gmail.com'))) || 
                     (isAuthenticated() && request.auth.uid == userId && 
                      request.resource.data.role == resource.data.role && 
                      request.resource.data.status == resource.data.status);
-                     
+                      
       allow delete: if isAdmin() && getUserData().role == 'super_admin';
     }
 

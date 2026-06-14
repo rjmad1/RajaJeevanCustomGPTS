@@ -29,6 +29,7 @@ const Admin: React.FC = () => {
   // Invitation Form State
   const [inviteName, setInviteName] = useState('');
   const [inviteDays, setInviteDays] = useState(7);
+  const [inviteDuration, setInviteDuration] = useState<'1_month' | '3_months' | '1_year'>('1_month');
   const [newCode, setNewCode] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
 
@@ -125,7 +126,8 @@ const Admin: React.FC = () => {
       const generateFn = httpsCallable(functions, 'generateAccessCode');
       const result = await generateFn({
         issuedTo: inviteName.trim(),
-        daysValid: inviteDays
+        daysValid: inviteDays,
+        accessDuration: inviteDuration
       });
       const data = result.data as { success: boolean; code: string };
       if (data.success) {
@@ -221,6 +223,7 @@ const Admin: React.FC = () => {
                         <th className="py-3 px-4">Email</th>
                         <th className="py-3 px-4">Role</th>
                         <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Access Expires</th>
                         <th className="py-3 px-4">Joined</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
@@ -250,6 +253,15 @@ const Admin: React.FC = () => {
                               }`}>
                                 {u.status}
                               </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {u.role === 'super_admin' || u.role === 'admin' ? (
+                                <span className="text-slate-400 italic">Never (Admin)</span>
+                              ) : u.accessExpiresAt ? (
+                                formatTime(u.accessExpiresAt)
+                              ) : (
+                                <span className="text-red-500 italic">No pass</span>
+                              )}
                             </td>
                             <td className="py-3.5 px-4 text-slate-500 dark:text-slate-500 text-xs">{formatTime(u.createdAt)}</td>
                             <td className="py-3.5 px-4 text-right">
@@ -355,6 +367,19 @@ const Admin: React.FC = () => {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Access Pass Duration</label>
+                  <select
+                    value={inviteDuration}
+                    onChange={(e) => setInviteDuration(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm transition-all"
+                  >
+                    <option value="1_month">1 Month Pass</option>
+                    <option value="3_months">3 Months Pass</option>
+                    <option value="1_year">1 Year Pass</option>
+                  </select>
+                </div>
+
                 <button
                   type="submit"
                   disabled={inviteLoading}
@@ -394,6 +419,7 @@ const Admin: React.FC = () => {
                       <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold text-xs uppercase tracking-wider">
                         <th className="py-3 px-4">Code</th>
                         <th className="py-3 px-4">Issued To</th>
+                        <th className="py-3 px-4">Access Pass</th>
                         <th className="py-3 px-4">Created</th>
                         <th className="py-3 px-4">Expires</th>
                         <th className="py-3 px-4">Redeemed By</th>
@@ -410,6 +436,11 @@ const Admin: React.FC = () => {
                           <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
                             <td className="py-3.5 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">{c.code}</td>
                             <td className="py-3.5 px-4 font-semibold text-slate-800 dark:text-slate-200">{c.issuedTo || 'Any'}</td>
+                            <td className="py-3.5 px-4">
+                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400 capitalize whitespace-nowrap">
+                                {(c.accessDuration || '1_month').replace('_', ' ')}
+                              </span>
+                            </td>
                             <td className="py-3.5 px-4 text-slate-500 dark:text-slate-500 text-xs">{formatTime(c.createdAt)}</td>
                             <td className="py-3.5 px-4 text-xs">
                               {c.used ? (

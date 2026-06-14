@@ -94,16 +94,29 @@ export const redeemAccessCode = functions.https.onCall(async (data: any, context
       );
     }
 
-    // Check if there are any users in the system. First user to redeem can be Super Admin.
-    const usersSnap = await db.collection('users').limit(1).get();
-    const isFirstUser = usersSnap.empty;
+    // Enforce that only rajajeevankumar@gmail.com can be the super_admin
+    const targetAdminEmail = 'rajajeevankumar@gmail.com';
+    const isAdminUser = email.toLowerCase() === targetAdminEmail.toLowerCase();
 
-    // Check if the user is predefined as Super Admin via functions config or env (fallback)
-    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || '';
-    const isPredefinedSuperAdmin = superAdminEmail && email.toLowerCase() === superAdminEmail.toLowerCase();
+    const role = isAdminUser ? 'super_admin' : 'authorized_user';
+    const status = 'approved'; // Approved automatically upon code redemption
 
-    const role = (isFirstUser || isPredefinedSuperAdmin) ? 'super_admin' : 'authorized_user';
-    const status = (isFirstUser || isPredefinedSuperAdmin) ? 'approved' : 'pending_approval';
+    let accessExpiresAt: admin.firestore.Timestamp | null = null;
+    if (!isAdminUser) {
+      const accessDuration = codeData.accessDuration || '1_month';
+      const accessDate = new Date();
+      if (accessDuration === '1_month') {
+        accessDate.setMonth(accessDate.getMonth() + 1);
+      } else if (accessDuration === '3_months') {
+        accessDate.setMonth(accessDate.getMonth() + 3);
+      } else if (accessDuration === '1_year') {
+        accessDate.setFullYear(accessDate.getFullYear() + 1);
+      } else {
+        // Default fallback: 30 days
+        accessDate.setDate(accessDate.getDate() + 30);
+      }
+      accessExpiresAt = admin.firestore.Timestamp.fromDate(accessDate);
+    }
 
     // 3. Mark Code as Used
     transaction.update(codeRef, {
@@ -115,7 +128,7 @@ export const redeemAccessCode = functions.https.onCall(async (data: any, context
 
     // 4. Create or Update User Document
     const userRef = db.collection('users').doc(uid);
-    const userData = {
+    const userData: any = {
       id: uid,
       email,
       name,
@@ -124,6 +137,9 @@ export const redeemAccessCode = functions.https.onCall(async (data: any, context
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       lastLogin: admin.firestore.FieldValue.serverTimestamp()
     };
+    if (accessExpiresAt) {
+      userData.accessExpiresAt = accessExpiresAt;
+    }
     transaction.set(userRef, userData);
 
     // 5. Write Audit Log
@@ -136,7 +152,14 @@ export const redeemAccessCode = functions.https.onCall(async (data: any, context
       entity: 'access_code',
       entityId: code,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      details: { email, name, role, status }
+      details: { 
+        email, 
+        name, 
+        role, 
+        status, 
+        accessDuration: isAdminUser ? 'unlimited' : (codeData.accessDuration || '1_month'),
+        accessExpiresAt: accessExpiresAt ? accessExpiresAt.toDate().toISOString() : 'never'
+      }
     });
 
     return { success: true, role, status };
@@ -167,6 +190,14 @@ export const generateAccessCode = functions.https.onCall(async (data: any, conte
 
   const issuedTo = (data.issuedTo || '').trim();
   const daysValid = parseInt(data.daysValid) || 7;
+  const accessDuration = data.accessDuration || '1_month';
+
+  if (!['1_month', '3_months', '1_year'].includes(accessDuration)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Access duration must be one of: 1_month, 3_months, 1_year.'
+    );
+  }
   
   // Generate a random 8-character alphanumeric code
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid confusing chars like I, O, 0, 1
@@ -187,7 +218,8 @@ export const generateAccessCode = functions.https.onCall(async (data: any, conte
     createdBy: callerUid,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     expiresAt,
-    used: false
+    used: false,
+    accessDuration
   });
 
   await writeAuditLog(
@@ -196,7 +228,7 @@ export const generateAccessCode = functions.https.onCall(async (data: any, conte
     'generate_code',
     'access_code',
     code,
-    { issuedTo, expiresAt: expiresAt.toDate().toISOString() }
+    { issuedTo, expiresAt: expiresAt.toDate().toISOString(), accessDuration }
   );
 
   return { success: true, code, expiresAt: expiresAt.toDate().toISOString() };
@@ -247,6 +279,14 @@ export const updateUserRoleAndStatus = functions.https.onCall(async (data: any, 
   const currentRole = targetUserData.role;
 
   // Strict Security Checks:
+  // 0. Enforce single administrator constraint
+  if ((newRole === 'admin' || newRole === 'super_admin') && targetUserData.email.toLowerCase() !== 'rajajeevankumar@gmail.com'.toLowerCase()) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'The ecosystem is restricted to a single administrator (rajajeevankumar@gmail.com).'
+    );
+  }
+
   // 1. Only Super Admin can change someone's role to admin or super_admin, or demote them from it.
   // 2. Normal Admins can only approve, suspend, or reactivate standard 'authorized_user's.
   // 3. Normal Admins cannot change roles of other users.
