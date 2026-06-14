@@ -1,62 +1,64 @@
 # Security Architecture: Private AI Agents Portal
 
-This document details the security posture, Authentication/Authorization flows, and OWASP Top 10 mitigation strategies.
+This document outlines the authentication protocol, cryptographic verification, and security controls built into the Private AI Agents Portal.
 
 ---
 
-## 1. Authentication & Registration Flow
+## 1. Authentication & Security Topology
 
-The system employs a multi-tiered security model to prevent unauthorized access:
-
-1. **Google Identity Check:** Users must authenticate using a verified Google Account.
-2. **Access Code Check:** Unregistered users are blocked and must redeem a one-time invitation code issued by an Admin.
-3. **Admin Approval:** Redeeming the code places the account in a `pending_approval` state. An administrator must manually approve the user in the Admin Dashboard to grant access.
-4. **Active Revocation:** Suspended accounts lose access immediately in real-time.
+The portal runs as a stateless client application, removing server-side database targets. Security checks are executed in the client's browser sandbox using cryptographic signatures:
 
 ```mermaid
 sequenceDiagram
-  actor User
-  participant Frontend
-  participant Functions
-  participant DB as Firestore
+  actor User as Guest User
+  participant App as Client Web App
+  participant Crypto as Web Crypto API
   
-  User->>Frontend: Click "Sign in with Google"
-  Frontend->>User: Redirects to Google Login
-  User->>Frontend: Returns Google Auth Token
-  Frontend->>DB: Check User Document
-  alt User Document Not Found
-    Frontend->>User: Display Invitation Code Field
-    User->>Frontend: Submit Invite Code
-    Frontend->>Functions: redeemAccessCode(code)
-    Functions->>DB: Transactionally check & flag code as used
-    Functions->>DB: Create User Profile (status = pending)
-    Functions->>User: Return Success (Display Pending Message)
-  else Status is Approved
-    Frontend->>User: Unlock Dashboard
-  else Status is Suspended
-    Frontend->>User: Display Access Denied
+  User->>App: Input Email + Access Pass Token
+  App->>Crypto: Verify token signature against VITE_ADMIN_SECRET
+  Crypto-->>App: Signature Validity (True/False)
+  alt Signature is invalid OR email mismatch OR date is expired
+    App-->>User: Login Fails (Displays Error)
+  else Access Pass is Valid
+    App->>App: Save session to LocalStorage
+    App->>App: Unlock Routes & Catalog
+    App-->>User: Load Dashboard Grid
   end
 ```
 
 ---
 
-## 2. OWASP Top 10 Mitigation Matrix
+## 2. Cryptographic Access Pass Protocol
 
-| OWASP Top 10 Risk | Mitigation Strategy |
-| :--- | :--- |
-| **A01:2021-Broken Access Control** | Firestore Security Rules deny reads/writes unless user is marked `approved` in the database. Role modifications restricted to Super Admin. |
-| **A02:2021-Cryptographic Failures** | TLS enforced by Google/Firebase Hosting. Sensitive auth tokens and cookies managed directly by Google Identity APIs. |
-| **A03:2021-Injection** | Firestore parameterized queries prevent SQL/NoSQL Injection. Cloud Functions validate input data before executing writes. |
-| **A04:2021-Insecure Design** | Principle of Least Privilege: Clients have zero write access to audit logs, access codes, and other user profiles. |
-| **A05:2021-Security Misconfiguration** | Infrastructure configurations (`firebase.json`, `firestore.rules`) declared inside version control (IaC) and validated on CI/CD pipelines. |
-| **A06:2021-Vulnerable Components** | Automated dependency checks. Code written without bloated direct dependencies on third-party backend packages. |
-| **A07:2021-Identification & Authentication** | Delegated entirely to Google Identity Platforms. Access codes redeemed via Cloud Functions transaction checks. |
-| **A08:2021-Software and Data Integrity** | Deployment pipelines run on GitHub Actions checking, linting, and compiling before committing builds to CDN hosting edges. |
-| **A09:2021-Security Logging and Monitoring** | All write operations, approvals, suspensions, and registration code creations generate records in the `audit_logs` collection. |
+Access passes are cryptographically signed payloads following a JWT-inspired structure:
+1. **Payload Structure:**
+   ```json
+   {
+     "email": "guest@example.com",
+     "expiresAt": 1781300000000,
+     "role": "authorized_user"
+   }
+   ```
+2. **Signature Method:**
+   * The JSON payload is Base64 encoded: `base64Payload = btoa(JSON.stringify(payload))`.
+   * An HMAC-SHA256 signature is calculated on the raw JSON payload using the environment variable `VITE_ADMIN_SECRET`:
+     `sigHex = HMAC_SHA256_Hex(payload, secret)`.
+   * The final token is formatted as: `base64Payload.sigHex`.
+3. **Validation Checks:**
+   * **Integrity Check:** The app recalculates the signature and verifies it matches `sigHex`.
+   * **Email Match Check:** The logged-in email must match the token's embedded `email`.
+   * **Expiration Check:** The current timestamp `Date.now()` must be less than `expiresAt`.
 
 ---
 
-## 3. Session Security & Headers
+## 3. OWASP Top 10 Mitigation Matrix
 
-* **Content-Security-Policy (CSP):** Configured via Firebase Hosting headers to block unsafe inline scripts and enforce connections only to verified Firebase endpoints.
-* **HTTP Headers:** Secure cookies, `SameSite=Strict`, `HttpOnly` and `Secure` markers managed by Google Auth.
+| OWASP Top 10 Risk | Mitigation Strategy |
+| :--- | :--- |
+| **A01:2021-Broken Access Control** | Client route guards (`ApprovedRoute`, `AdminRoute`) enforce access limits. Suspended states and expiries block route loading. |
+| **A02:2021-Cryptographic Failures** | TLS enforced by Vercel Hosting. Access pass signatures use cryptographically strong browser-native HMAC-SHA256. |
+| **A03:2021-Injection** | Remove NoSQL/SQL databases. Input sanitization prevents scripting injection in custom agent imports. |
+| **A04:2021-Insecure Design** | Separation of duties. Admin key is never stored in public JavaScript bundles (baked in via Vercel env at compile-time). |
+| **A05:2021-Security Misconfiguration** | local environment variable config (`.env`) is excluded from Git to prevent secret key leaks. |
+| **A08:2021-Software and Data Integrity** | Continuous builds compile client code through clean environment configurations. |
+| **A09:2021-Security Logging** | Admin actions (pass generation/revocation) generate structured entries in local storage audit logs. |

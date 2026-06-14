@@ -1,33 +1,30 @@
 # Operations Guide: Private AI Agents Portal
 
-This guide outlines the day-to-day operational tasks, quotas monitoring, and logs diagnostics for the Private AI Agents Portal.
+This guide outlines day-to-day operations, usage limits, and diagnostic procedures for the Private AI Agents Portal.
 
 ---
 
-## 1. Firebase Free-Tier Quota Monitoring
+## 1. Hosting Quotas & Resource Monitoring
 
-The portal is designed to run entirely on the Firebase Free-Tier. It is crucial to monitor quota consumption in the Firebase Console:
+The web application is hosted as static assets on Vercel's Edge CDN. Keep track of Vercel usage limits in the Vercel console:
 
-| Service | Free Tier Limit | Action if exceeded |
-| :--- | :--- | :--- |
-| **Firestore Reads** | 50,000 / day | Queries cease; upgrade database budget limits. |
-| **Firestore Writes** | 20,000 / day | CRUD operations disabled. |
-| **Cloud Functions Calls**| 2,000,000 / month | Redeem code / admin functions disabled. |
-| **Hosting Storage** | 10 GB | Cannot deploy new front-end updates. |
-| **Hosting Bandwidth** | 360 MB / day | Portal site access returns 503 errors. |
+* **Edge Bandwidth:** Free tier includes 100 GB/month. Static assets are small (~300 KB), meaning this limit is highly sufficient.
+* **Build Minutes:** Free tier includes 6,000 build minutes/month.
+* **Domain Limits:** Native SSL certificates are auto-renewed by Vercel.
 
 ---
 
-## 2. Monitoring & Sentry Alerts
+## 2. Browser Local Storage Limitations
 
-* **Sentry Errors Dashboard:** Configure Sentry by providing `VITE_SENTRY_DSN` in the front-end environment file. Check Sentry Console for javascript console errors or failed functions call payloads.
-* **Firebase Performance Monitor:** Performance metrics (LCP, FID) are visible under **Analytics** > **Performance** in the Firebase console.
-* **Cloud Functions Logs:** View logs in **Build** > **Functions** > **Logs** to inspect server-side execution and error tracebacks.
+Since all user configurations, custom agent overrides, and admin pass lists reside in the browser's `localStorage`:
+* **Storage Limit:** Modern browsers allocate approximately **5 MB** of local storage per domain origin.
+* **Database Consumption:** The default registry of 55 agents and 100+ audit log lines consumes under **100 KB** (less than 2% of the quota).
+* **Optimization:** Keep audit logs below 500 lines by periodically revoking old passes to prevent local storage bloat.
 
 ---
 
-## 3. Routine Diagnostics Checklist
+## 3. Routine Operator Diagnostics
 
-* **Check Audit Logs (Weekly):** Review the **Audit Logs** tab in the Admin Panel to monitor code generation and user status changes.
-* **Inspect Suspended Users (Monthly):** Ensure suspended accounts are cleared or deactivated permanently.
-* **Validate Backups (Monthly):** Run the local JSON backup task to ensure registry changes are backed up.
+* **Weekly Audit Logs Review:** Go to the Admin Panel > Audit Logs tab. Ensure that access pass tokens are only generated for recognized guest emails.
+* **Monthly JSON Backup:** Export a fresh copy of `custom_gpt_backup.json` from the catalog FAB menu and save it to external storage.
+* **Pass Rotation Recommendation:** Revoke old or expired guest passes periodically to keep the administrative tracking list clean.

@@ -1,112 +1,80 @@
 # Deployment Guide: Private AI Agents Portal
 
-This guide provides step-by-step instructions to deploy the Private AI Agents Portal onto a clean Firebase environment.
+This guide provides instructions to deploy the stateless Private AI Agents Portal onto Vercel.
 
 ---
 
 ## Prerequisites
 
-1. **Google Account:** Required to log in to Firebase.
-2. **Node.js installed (v18 or higher):** Required to run build scripts locally.
-3. **Firebase CLI:** Install globally using:
+1. **GitHub Account:** The project is integrated with Git version control.
+2. **Node.js installed (v18 or higher):** Required to run local builds.
+3. **Vercel Account:** Required to host the compiled static SPA assets.
+
+---
+
+## Step 1: Clone and Configure Local Environment
+
+1. Clone the repository to your local machine:
    ```bash
-   npm install -g firebase-tools
+   git clone https://github.com/rjmad1/RajaJeevanCustomGPTS.git
+   cd RajaJeevanCustomGPTS
    ```
+2. Run the bootstrap script to install project-wide dependencies:
+   ```bash
+   npm run bootstrap
+   ```
+3. Create a local environment variables file inside `apps/web/.env`:
+   ```bash
+   # apps/web/.env
+   VITE_ADMIN_SECRET=RajaJeevan_CustomGPT_Admin_2026_#9a2b!
+   ```
+   *(Ensure this file is not committed to git; it is blacklisted in `.gitignore`)*.
 
 ---
 
-## Step 1: Create a Firebase Project
+## Step 2: Test the Build Locally
 
-1. Open the [Firebase Console](https://console.firebase.google.com/).
-2. Click **Add Project**, enter a project name (e.g. `my-ai-agents-portal`), and click **Continue**.
-3. Enable Google Analytics when prompted (recommended).
-4. Click **Create Project** and wait for it to complete.
-
----
-
-## Step 2: Configure Authentication & Google Sign-In
-
-1. In the Firebase Console, go to **Build** > **Authentication** and click **Get Started**.
-2. Select **Sign-in method** tab.
-3. Choose **Google** under **Additional providers**.
-4. Enable the provider, enter your project support email, and click **Save**.
-
----
-
-## Step 3: Initialize Cloud Firestore Database
-
-1. In the Firebase Console, go to **Build** > **Firestore Database**.
-2. Click **Create Database**.
-3. Select **Start in test mode** (the deployment will overwrite rules with our secure `firestore.rules`).
-4. Choose a Firestore location closest to your users and click **Enable**.
-
----
-
-## Step 4: Configure Local Environment Variables
-
-Create a `.env` file inside `/apps/web/` based on the configuration keys.
-To get your web app configuration:
-1. In the Firebase Console, click the **Gear Icon** > **Project Settings**.
-2. Under **Your apps**, click the `</>` (Web App) icon.
-3. Register the app (e.g., `ai-agents-web`), copy the `firebaseConfig` keys, and write them to `/apps/web/.env`:
+Verify that the TypeScript compilation and Vite bundling run without errors:
 
 ```bash
-# apps/web/.env
-VITE_FIREBASE_API_KEY=AIzaSy...
-VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=1234567890
-VITE_FIREBASE_APP_ID=1:12345:web:abcd
-VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
-
-# (Optional) Toggle to run against local Firebase Emulator (set to true only for testing)
-VITE_USE_EMULATORS=false
+npm run build
 ```
+
+The compiled assets are stored under `apps/web/dist`.
 
 ---
 
-## Step 5: Install and Compile Dependencies
+## Step 3: Deploy to Vercel
 
-Open your terminal in the project root directory and run:
-
-```bash
-# 1. Install packages
-npm run bootstrap
-
-# 2. Extract database seed from the original HTML file
-npm run parse --workspace=scripts
-```
-
----
-
-## Step 6: Deploy to Firebase Hosting & Functions
-
-> [!IMPORTANT]
-> **Blaze Plan Requirement:** Ensure your Firebase project is upgraded to the **Blaze (Pay-as-you-go) Plan** to allow Cloud Functions to compile. The usage is subject to the free tier (100% free under low volumes).
-
-1. Log in to Firebase CLI:
-   ```bash
-   firebase login
-   ```
-2. Select your active project:
-   ```bash
-   firebase use --add your-project-id
-   ```
-3. Run the deployment command:
-   ```bash
-   firebase deploy
-   ```
+1. Open the [Vercel Dashboard](https://vercel.com/) and click **Add New** > **Project**.
+2. Select and import your GitHub repository: `rjmad1/RajaJeevanCustomGPTS`.
+3. In the **Configure Project** pane, configure the following settings:
+   * **Framework Preset:** Vite (or Other)
+   * **Root Directory:** `./` (Keep root-level directory)
+4. Expand the **Build and Development Settings** tab. Ensure they align with [vercel.json](file:///c:/Users/rajaj/Projects/RajaJeevan_CustomGPT_Home/vercel.json):
+   * **Build Command:** `npm run build`
+   * **Output Directory:** `apps/web/dist`
+5. Expand the **Environment Variables** tab and add:
+   * **Name:** `VITE_ADMIN_SECRET`
+   * **Value:** `<your-secure-cryptographic-secret-key>`
+6. Click **Deploy**. Vercel will build, compile, and publish your site to a secure `.vercel.app` domain.
 
 ---
 
-## Step 7: Seed Default Database & Bootstrap Admin Account
+## Step 4: Verify Routing & Clean URLs
 
-Once deployed successfully, run the database seeder to populate the 55 agents and categories:
-
-```bash
-# Seed Firestore (Ensure you have run firebase login first)
-npm run seed
+The root-level `vercel.json` defines SPA redirection mappings to avoid HTTP 404 errors on browser page reloads:
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "apps/web/dist",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
 ```
-
-This script will output a bootstrap code (e.g., `WELCOME2026`). Open your deployed URL, log in with Google, enter the code, and your account will automatically become the **Super Admin**!
+All routes are resolved on the client side via React Router.

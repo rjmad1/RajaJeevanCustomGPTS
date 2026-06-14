@@ -1,97 +1,116 @@
 # Architecture Document: Private AI Agents Portal
 
-This document outlines the system architecture, component breakdown, and tech stack for the modernized Private AI Agents Portal.
+This document outlines the system architecture, component breakdown, and client-side data schema for the modernized, stateless Private AI Agents Portal.
 
 ---
 
 ## 1. System Overview
 
-The Private AI Agents Portal is a serverless SaaS portal designed to manage a curated directory of CustomGPTs and AI Agents. It replaces a client-side localStorage prototype with a Google Identity-secured serverless framework.
+The Private AI Agents Portal is a database-free, zero-configuration static web application. It eliminates external databases (Firestore) and identity providers (Google OAuth), relying instead on **client-side cryptographic signature verification** via the browser's native **Web Crypto API**.
 
 ```mermaid
 graph TD
   User([User Web Browser])
-  Auth[Google OAuth + Firebase Auth]
-  Hosting[Firebase Hosting]
-  Firestore[(Cloud Firestore)]
-  Functions[Firebase Cloud Functions]
+  Vercel[Vercel CDN Edge]
+  WebCrypto[Web Crypto API HMAC-SHA256]
+  LocalStorage[(Browser Local Storage)]
   
-  User -->|Request Page| Hosting
-  User -->|Auth Redirect| Auth
-  User -->|Direct Query| Firestore
-  User -->|Redeem Code / Manage Users| Functions
-  Functions -->|Transact Data| Firestore
+  User -->|Fetch Web Assets| Vercel
+  User -->|Verify Access Pass| WebCrypto
+  User -->|Load Registry & Sessions| LocalStorage
+  LocalStorage -->|Merge Default JSON + Custom| User
 ```
 
 ---
 
 ## 2. Monorepo Repository Structure
 
-The project is structured as a workspace monorepo:
-* `/apps/web`: React, TypeScript, and Vite single-page frontend.
-* `/functions`: Serverless Node.js backend functions.
-* `/infrastructure`: Declarative configurations for Firestore rules and indexes.
-* `/scripts`: Management scripts for seeding and backing up.
-* `/docs`: Manuals, recovery runbooks, and operator guides.
+The repository workspace structure:
+* **`/apps/web`:** React, TypeScript, and Vite single-page frontend.
+  * **`src/components`:** UI widgets (Navbar, etc.).
+  * **`src/context`:** Authentication session and roles context provider (`AuthContext`).
+  * **`src/data`:** Pre-seeded directory items (`default-agents.json`).
+  * **`src/pages`:** Directory Catalog (`Dashboard`), cryptographic pass manager (`Admin`), and credential forms (`Login`).
+  * **`src/utils`:** HMAC-SHA256 token encoding, signature, and validation methods (`tokenManager`).
+* **`/docs`:** Manuals, recovery runbooks, and operator guides.
 
 ---
 
 ## 3. Technology Stack
 
 * **Frontend Framework:** React 18, TypeScript, Vite
-* **Styling & Theme:** Tailwind CSS, custom brand color variables (Light/Dark themes)
-* **Backend:** Firebase Cloud Functions (Node.js 18)
-* **Database:** Cloud Firestore (Document NoSQL)
-* **Hosting:** Firebase Hosting (CDN cached edge routing)
-* **Identity Provider:** Google Sign-in via Firebase Authentication
-* **CI/CD:** GitHub Actions
+* **Styling & Theme:** Tailwind CSS, CSS-only lag-free hover tooltips, dark mode variables
+* **Crypto Engine:** Native browser `window.crypto.subtle` (no heavy third-party npm packages)
+* **Hosting Platform:** Vercel (Edge-cached CDN with client-side SPAs redirect rules)
 
 ---
 
-## 4. Database Schema (Firestore)
+## 4. Client State & Storage Schema (LocalStorage)
 
-### `users` (Collection)
-* `id` (Document ID / User UID)
-* `email` (String)
-* `name` (String)
-* `role` (String: `super_admin` | `admin` | `authorized_user`)
-* `status` (String: `pending_approval` | `approved` | `suspended`)
-* `createdAt` (Timestamp)
-* `lastLogin` (Timestamp)
+Because there is no external database, all user-specific overrides, custom items, and admin configurations are stored in browser `localStorage`:
 
-### `categories` (Collection)
-* `id` (Document ID)
-* `name` (String: `plan` | `do` | `check` | `act`)
-* `sortOrder` (Number)
+### `access_pass_token` (String)
+* Holds the cryptographically signed JWT-like token string (`base64Payload.signatureHex`).
 
-### `agents` (Collection)
-* `id` (Document ID)
-* `name` (String)
-* `url` (String)
-* `description` (String)
-* `categoryId` (String)
-* `createdBy` (String)
-* `createdAt` (Timestamp)
-* `updatedAt` (Timestamp)
+### `access_pass_email` (String)
+* Holds the email address linked to the active session.
 
-### `access_codes` (Collection)
-* `id` (Document ID)
-* `code` (String)
-* `issuedTo` (String)
-* `createdBy` (String)
-* `createdAt` (Timestamp)
-* `expiresAt` (Timestamp)
-* `used` (Boolean)
-* `redeemedBy` (String)
-* `redeemedEmail` (String)
-* `redeemedAt` (Timestamp)
+### `custom_agents` (JSON Array)
+* Stores user-created CustomGPT entities.
+* Structure:
+  * `id`: Unique string ID (e.g. `custom_1700000000000`)
+  * `name`: String
+  * `url`: String (ChatGPT URL)
+  * `description`: String
+  * `categoryId`: String (`plan` | `do` | `check` | `act`)
+  * `createdBy`: String (Creator email)
+  * `createdAt`: ISO Date String
+  * `updatedAt`: ISO Date String
 
-### `audit_logs` (Collection)
-* `id` (Document ID)
-* `userId` (String)
-* `userEmail` (String)
-* `action` (String: `redeem_code` | `generate_code` | `update_user` etc.)
-* `entity` (String)
-* `entityId` (String)
-* `timestamp` (Timestamp)
-* `details` (Map/Object)
+### `deleted_agents` (JSON Array of Strings)
+* Blacklist of default agent IDs that the user has deleted from their local registry layout.
+
+### `issued_passes` (JSON Array - Admins Only)
+* Registry of cryptographic access pass tokens generated by the administrator.
+* Structure:
+  * `id`: String
+  * `email`: String
+  * `duration`: String (`1_month` | `3_months` | `1_year`)
+  * `token`: String (cryptographic hash)
+  * `createdAt`: ISO Date String
+  * `expiresAt`: ISO Date String
+
+### `local_audit_logs` (JSON Array - Admins Only)
+* Stores local administrative action logs.
+* Structure:
+  * `id`: String
+  * `timestamp`: ISO Date String
+  * `action`: String (`generate_pass` | `revoke_pass`)
+  * `details`: String
+
+---
+
+## 5. Cryptographic Token Lifecycle
+
+Access passes are issued and validated entirely in the browser:
+
+```mermaid
+sequenceDiagram
+  actor Admin
+  actor Guest
+  participant App as Web App (tokenManager)
+  
+  Admin->>App: Input Guest Email + Select Duration
+  App->>App: Sign payload with HMAC-SHA256 & VITE_ADMIN_SECRET
+  App->>Admin: Copy generated token (base64Payload.sigHex)
+  Admin->>Guest: Share Token
+  Guest->>App: Login with Email & Token
+  App->>App: Verify HMAC Signature with VITE_ADMIN_SECRET
+  alt Signature is Valid & Not Expired
+    App->>Guest: Unlock Catalog (Session Saved to LocalStorage)
+  else Invalid/Expired
+    App->>Guest: Return Login Error
+  end
+```
+
+* **Master Backdoor Key:** The administrator uses `rajajeevankumar@gmail.com` and the exact value of the backend secret environment variable `VITE_ADMIN_SECRET` to bypass token generation and obtain full privileges.

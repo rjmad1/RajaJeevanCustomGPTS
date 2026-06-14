@@ -1,54 +1,39 @@
 # Disaster Recovery Guide: Private AI Agents Portal
 
-This runbook covers critical recovery steps during system failures, admin lockouts, or database corruptions.
+This runbook covers critical recovery steps for administrator lockouts, registry data corruption, or Vercel deployment failures.
 
 ---
 
 ## 1. Administrator Lockout Recovery
 
-If the only Super Admin account is suspended or demoted, run the bootstrap script from the terminal to restore admin permissions:
-
-1. Log in to Firebase CLI:
-   ```bash
-   firebase login
-   ```
-2. Run the seeding tool (re-creates `WELCOME2026` bootstrap code):
-   ```bash
-   npm run seed
-   ```
-3. Redeem the code via the portal to restore super admin credentials.
-
-*Alternative (Direct Firestore edit):*
-1. Open the [Firebase Console](https://console.firebase.google.com/).
-2. Navigate to **Build** > **Firestore Database**.
-3. Open the `users` collection, select your user document ID, and change the parameters:
-   * `role`: `super_admin`
-   * `status`: `approved`
+If you are unable to access the administration portal using the email `rajajeevankumar@gmail.com`:
+1. Log in to the [Vercel Console](https://vercel.com/).
+2. Navigate to your project settings under **Settings** > **Environment Variables**.
+3. Locate the `VITE_ADMIN_SECRET` variable.
+4. Verify the value, or update it to a new secure passphrase if the previous one is lost.
+5. If you update the secret variable, trigger a redeployment in Vercel to compile the new secret value into the client application.
+6. Return to the portal login screen and enter:
+   * **Email:** `rajajeevankumar@gmail.com`
+   * **Access Pass:** The newly updated `VITE_ADMIN_SECRET` passphrase value.
 
 ---
 
-## 2. Restoring Corrupt/Lost Database
+## 2. Restoring Corrupted Local Storage Registry
 
-If Firestore collections are deleted, choose one of these restoration paths:
-
-### Path A: Restoring via Deployed Web Portal (Admin GUI)
-1. Log in as Admin.
-2. Click the floating **+ (FAB)** button.
-3. Select **Import JSON**.
-4. Select the latest backup JSON (e.g. `custom_gpt_backup.json` downloaded during a routine export) to restore the registry.
-
-### Path B: Restoring via Local Backup JSON Files
-If you have local backups created by the node backup script under `/backups/YYYY-MM-DD/`:
-1. Check the local backup folder.
-2. Run the restoration node script (see Backup & Restore documentation).
+If browser history or data is wiped, the custom added agents and settings are cleared:
+1. Log in as Super Admin.
+2. Click the floating **+ (FAB)** button in the bottom right corner of the catalog.
+3. Under **Backups & Portability**, click **Import JSON**.
+4. Select the latest `custom_gpt_backup.json` export to restore your registry changes.
+5. The portal merges these custom items back into local storage.
 
 ---
 
-## 3. Firebase Deployment Rollbacks
+## 3. Deployment Rollbacks (Vercel)
 
-If a bad deployment breaks the production web portal, roll back immediately:
-
-1. Open the Firebase Console.
-2. Go to **Build** > **Hosting**.
-3. In the **Release History** tab, locate the previous working release.
-4. Click the three dots and select **Rollback**. The portal is instantly rolled back at the CDN edge without running another compile pipeline.
+If a new code deployment breaks the client-side portal, roll back immediately using Vercel's console:
+1. Open the Vercel Project Dashboard.
+2. Navigate to the **Deployments** tab.
+3. Find the last stable deployment in the history list.
+4. Click the three horizontal dots next to the stable deployment and select **Promote to Production**.
+5. Vercel will instantly point your domains to the working stable deployment at the edge without recompiling.
