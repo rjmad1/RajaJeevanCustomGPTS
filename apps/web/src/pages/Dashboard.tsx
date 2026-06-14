@@ -1,27 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  collection, 
-  doc, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  setDoc,
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { Agent, Category } from '../types';
 import Navbar from '../components/Navbar';
 import AgentCard from '../components/AgentCard';
+import defaultAgentsRaw from '../data/default-agents.json';
 
 const Dashboard: React.FC = () => {
   const { user, profile } = useAuth();
+  
+  // Statically defined categories
+  const categories: Category[] = [
+    { id: 'plan', name: 'plan', sortOrder: 1 },
+    { id: 'do', name: 'do', sortOrder: 2 },
+    { id: 'check', name: 'check', sortOrder: 3 },
+    { id: 'act', name: 'act', sortOrder: 4 },
+  ];
+
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [favorites, setFavorites] = useState<string[]>([]); // Array of agent IDs
+  const [favorites, setFavorites] = useState<string[]>([]);
   
   // Search & Filter state
   const [search, setSearch] = useState('');
@@ -42,55 +38,68 @@ const Dashboard: React.FC = () => {
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
 
-  // 1. Fetch Categories
-  useEffect(() => {
-    const q = query(collection(db, 'categories'), orderBy('sortOrder', 'asc'));
-    return onSnapshot(q, (snapshot) => {
-      const cats: Category[] = [];
-      snapshot.forEach((doc) => {
-        cats.push({ id: doc.id, ...doc.data() } as Category);
+  // 1. Reconstruct and merge agents from JSON & LocalStorage
+  const loadRegistry = () => {
+    // Flatten default agents from JSON file
+    const flattenedDefaults: Agent[] = defaultAgentsRaw.flatMap((group: any) => {
+      const catId = group.category;
+      const list = group.agents || [];
+      return list.map((item: any) => {
+        const safeName = item.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+        const agentId = `${catId}_${safeName}`;
+        return {
+          id: agentId,
+          name: item.name,
+          url: item.url,
+          description: item.desc || '',
+          categoryId: catId,
+          createdBy: 'system'
+        };
       });
-      setCategories(cats);
     });
+
+    // Load custom additions/overrides and deletions from localStorage
+    const customAgentsStr = localStorage.getItem('custom_agents');
+    const customAgents: Agent[] = customAgentsStr ? JSON.parse(customAgentsStr) : [];
+
+    const deletedIdsStr = localStorage.getItem('deleted_agents');
+    const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
+
+    // Filter defaults (remove deleted and anything overridden by custom edits)
+    const activeDefaults = flattenedDefaults.filter(
+      (a) => !deletedIds.includes(a.id) && !customAgents.some((c) => c.id === a.id)
+    );
+
+    // Merge active defaults and custom agents
+    const merged = [...activeDefaults, ...customAgents];
+    setAgents(merged);
+  };
+
+  useEffect(() => {
+    loadRegistry();
   }, []);
 
-  // 2. Fetch Agents
-  useEffect(() => {
-    const q = query(collection(db, 'agents'), orderBy('name', 'asc'));
-    return onSnapshot(q, (snapshot) => {
-      const ags: Agent[] = [];
-      snapshot.forEach((doc) => {
-        ags.push({ id: doc.id, ...doc.data() } as Agent);
-      });
-      setAgents(ags);
-    });
-  }, []);
-
-  // 3. Fetch Favorites for User
+  // 2. Fetch Favorites for User (Stored per-user email)
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, `users/${user.uid}/favorites`));
-    return onSnapshot(q, (snapshot) => {
-      const favIds: string[] = [];
-      snapshot.forEach((doc) => {
-        favIds.push(doc.id);
-      });
-      setFavorites(favIds);
-    });
+    const favKey = `favorites_${user.email}`;
+    const savedFavs = localStorage.getItem(favKey);
+    setFavorites(savedFavs ? JSON.parse(savedFavs) : []);
   }, [user]);
 
   // Handle Favorites toggle
-  const toggleFavorite = async (agentId: string) => {
+  const toggleFavorite = (agentId: string) => {
     if (!user) return;
-    const favRef = doc(db, `users/${user.uid}/favorites`, agentId);
+    const favKey = `favorites_${user.email}`;
+    let updated: string[] = [];
+
     if (favorites.includes(agentId)) {
-      await deleteDoc(favRef);
+      updated = favorites.filter((id) => id !== agentId);
     } else {
-      await setDoc(favRef, {
-        agentId,
-        createdAt: serverTimestamp()
-      });
+      updated = [...favorites, agentId];
     }
+    setFavorites(updated);
+    localStorage.setItem(favKey, JSON.stringify(updated));
   };
 
   // CRUD Operations
@@ -112,47 +121,75 @@ const Dashboard: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveAgent = async (e: React.FormEvent) => {
+  const handleSaveAgent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!agentName.trim() || !agentUrl.trim()) return;
 
     try {
-      const agentData = {
-        name: agentName.trim(),
-        url: agentUrl.trim(),
-        description: agentDesc.trim(),
-        categoryId: agentCat,
-        updatedAt: serverTimestamp(),
-      };
+      const customAgentsStr = localStorage.getItem('custom_agents');
+      const customAgents: Agent[] = customAgentsStr ? JSON.parse(customAgentsStr) : [];
 
       if (editingAgent) {
-        // Update
-        const docRef = doc(db, 'agents', editingAgent.id);
-        await updateDoc(docRef, agentData);
+        // Edit agent (if editing a default agent, it becomes a custom override)
+        const updatedAgent: Agent = {
+          ...editingAgent,
+          name: agentName.trim(),
+          url: agentUrl.trim(),
+          description: agentDesc.trim(),
+          categoryId: agentCat,
+          updatedAt: new Date().toISOString()
+        };
+
+        const existingIdx = customAgents.findIndex((c) => c.id === editingAgent.id);
+        if (existingIdx > -1) {
+          customAgents[existingIdx] = updatedAgent;
+        } else {
+          customAgents.push(updatedAgent);
+        }
       } else {
-        // Create
-        await addDoc(collection(db, 'agents'), {
-          ...agentData,
-          createdBy: user?.uid || '',
-          createdAt: serverTimestamp()
-        });
+        // Create new custom agent
+        const newAgent: Agent = {
+          id: `custom_${Date.now()}`,
+          name: agentName.trim(),
+          url: agentUrl.trim(),
+          description: agentDesc.trim(),
+          categoryId: agentCat,
+          createdBy: user?.email || 'admin',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        customAgents.push(newAgent);
       }
 
+      localStorage.setItem('custom_agents', JSON.stringify(customAgents));
+      loadRegistry();
       setIsModalOpen(false);
-      // Reset
-      setAgentName('');
-      setAgentUrl('');
-      setAgentDesc('');
     } catch (err) {
       console.error("Error saving agent:", err);
       alert("Failed to save agent.");
     }
   };
 
-  const handleDeleteAgent = async (agentId: string) => {
+  const handleDeleteAgent = (agentId: string) => {
     if (!window.confirm("Are you sure you want to delete this agent?")) return;
     try {
-      await deleteDoc(doc(db, 'agents', agentId));
+      const customAgentsStr = localStorage.getItem('custom_agents');
+      let customAgents: Agent[] = customAgentsStr ? JSON.parse(customAgentsStr) : [];
+
+      // If it exists in custom agents, delete it
+      if (customAgents.some((c) => c.id === agentId)) {
+        customAgents = customAgents.filter((c) => c.id !== agentId);
+        localStorage.setItem('custom_agents', JSON.stringify(customAgents));
+      } else {
+        // Otherwise, it is a default agent, add to deletions blacklist
+        const deletedIdsStr = localStorage.getItem('deleted_agents');
+        const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
+        if (!deletedIds.includes(agentId)) {
+          deletedIds.push(agentId);
+          localStorage.setItem('deleted_agents', JSON.stringify(deletedIds));
+        }
+      }
+      loadRegistry();
     } catch (err) {
       console.error("Error deleting agent:", err);
     }
@@ -160,7 +197,6 @@ const Dashboard: React.FC = () => {
 
   // Client-side export to JSON
   const handleExportJSON = () => {
-    // Reconstruct the 4-column array layout for compatibility
     const columns = ['plan', 'do', 'check', 'act'];
     const exportArray = columns.map((catId) => {
       return agents
@@ -181,44 +217,53 @@ const Dashboard: React.FC = () => {
   };
 
   // Client-side import from JSON
-  const handleImportJSON = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     setImportStatus('Reading backup file...');
     const reader = new FileReader();
-    reader.onload = async () => {
+    reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result as string);
         if (!Array.isArray(parsed) || parsed.length !== 4) {
           throw new Error("Invalid backup format. Must be a 4-column JSON array.");
         }
 
-        setImportStatus('Seeding database... Please wait.');
+        setImportStatus('Merging registry... Please wait.');
         const categoriesMap = ['plan', 'do', 'check', 'act'];
+        
+        const customAgentsStr = localStorage.getItem('custom_agents');
+        const customAgents: Agent[] = customAgentsStr ? JSON.parse(customAgentsStr) : [];
 
         for (let catIndex = 0; catIndex < 4; catIndex++) {
           const catId = categoriesMap[catIndex];
           const list = parsed[catIndex] || [];
           
           for (const item of list) {
-            // Avoid duplicates check
-            const duplicate = agents.find(
+            // Avoid duplicates
+            const existsInMerged = agents.some(
               (a) => a.name.toLowerCase() === item.name.toLowerCase() && a.categoryId === catId
             );
-            if (!duplicate) {
-              await addDoc(collection(db, 'agents'), {
+            if (!existsInMerged) {
+              const newAgent: Agent = {
+                id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
                 name: item.name,
                 url: item.url,
                 description: item.desc || '',
                 categoryId: catId,
-                createdBy: user?.uid || '',
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-              });
+                createdBy: user?.email || 'admin',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              };
+              customAgents.push(newAgent);
             }
           }
         }
+        
+        localStorage.setItem('custom_agents', JSON.stringify(customAgents));
+        loadRegistry();
+        
         setImportStatus('Import completed successfully!');
         setTimeout(() => setImportStatus(null), 3000);
       } catch (err: any) {
@@ -246,7 +291,6 @@ const Dashboard: React.FC = () => {
 
     const registryString = JSON.stringify(exportArray, null, 2);
 
-    // This HTML matches the look of the original file, baked with current data
     const selfContainedHTML = `<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8">
@@ -338,7 +382,7 @@ const Dashboard: React.FC = () => {
   const getFilteredAgents = (categoryId: string) => {
     let filtered = agents.filter((a) => a.categoryId === categoryId);
     
-    // Fuzzy text filtering (fuzzy matching: simple name/desc inclusion)
+    // Fuzzy text filtering
     if (search.trim()) {
       const queryStr = search.toLowerCase();
       filtered = filtered.filter(

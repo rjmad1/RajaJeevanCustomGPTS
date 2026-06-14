@@ -1,72 +1,158 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '../firebase';
 import { UserProfile } from '../types';
+import { verifyToken, checkMasterPassphrase, generateToken } from '../utils/tokenManager';
+
+export interface LocalUser {
+  uid: string;
+  email: string;
+  displayName: string;
+}
 
 interface AuthContextType {
-  user: User | null;
+  user: LocalUser | null;
   profile: UserProfile | null;
   loading: boolean;
-  loginWithGoogle: () => Promise<void>;
+  login: (email: string, token: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    async function restoreSession() {
+      const savedToken = localStorage.getItem('access_pass_token');
+      const savedEmail = localStorage.getItem('access_pass_email');
+
+      if (savedToken && savedEmail) {
+        // Check if master passphrase
+        if (checkMasterPassphrase(savedEmail, savedToken)) {
+          setUser({
+            uid: 'admin-uid',
+            email: 'rajajeevankumar@gmail.com',
+            displayName: 'Raja Jeevan (Admin)'
+          });
+          setProfile({
+            id: 'admin-uid',
+            email: 'rajajeevankumar@gmail.com',
+            name: 'Raja Jeevan',
+            role: 'super_admin',
+            status: 'approved'
+          });
+        } else {
+          // Verify cryptographic token
+          const payload = await verifyToken(savedToken);
+          if (payload && payload.email === savedEmail.toLowerCase().trim()) {
+            setUser({
+              uid: payload.email,
+              email: payload.email,
+              displayName: payload.email.split('@')[0]
+            });
+            setProfile({
+              id: payload.email,
+              email: payload.email,
+              name: payload.email.split('@')[0],
+              role: payload.role,
+              status: 'approved',
+              accessExpiresAt: payload.expiresAt
+            });
+          } else {
+            // Invalid/expired session, clear it
+            localStorage.removeItem('access_pass_token');
+            localStorage.removeItem('access_pass_email');
+          }
+        }
+      }
+      setLoading(false);
+    }
+    restoreSession();
+  }, []);
+
+  const login = async (email: string, token: string): Promise<boolean> => {
+    const emailClean = email.toLowerCase().trim();
+    const tokenClean = token.trim();
+
+    try {
+      setLoading(true);
+
+      // 1. Handle Master Admin Login
+      if (checkMasterPassphrase(emailClean, tokenClean)) {
+        // Generate a valid permanent token for rajajeevankumar@gmail.com
+        const adminToken = await generateToken(emailClean, 'forever');
+        
+        localStorage.setItem('access_pass_token', adminToken);
+        localStorage.setItem('access_pass_email', emailClean);
+
+        setUser({
+          uid: 'admin-uid',
+          email: emailClean,
+          displayName: 'Raja Jeevan (Admin)'
+        });
+        setProfile({
+          id: 'admin-uid',
+          email: emailClean,
+          name: 'Raja Jeevan',
+          role: 'super_admin',
+          status: 'approved'
+        });
+        
+        return true;
+      }
+
+      // 2. Handle Guest Cryptographic Pass Login
+      const payload = await verifyToken(tokenClean);
+      if (!payload) {
+        throw new Error("Invalid or corrupted access pass.");
+      }
+
+      if (payload.email !== emailClean) {
+        throw new Error(`This access pass was issued for email: ${payload.email}`);
+      }
+
+      if (payload.expiresAt < Date.now()) {
+        throw new Error("This access pass has expired.");
+      }
+
+      localStorage.setItem('access_pass_token', tokenClean);
+      localStorage.setItem('access_pass_email', emailClean);
+
+      setUser({
+        uid: payload.email,
+        email: payload.email,
+        displayName: payload.email.split('@')[0]
+      });
+      setProfile({
+        id: payload.email,
+        email: payload.email,
+        name: payload.email.split('@')[0],
+        role: payload.role,
+        status: 'approved',
+        accessExpiresAt: payload.expiresAt
+      });
+
+      return true;
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    localStorage.removeItem('access_pass_token');
+    localStorage.removeItem('access_pass_email');
+    setUser(null);
     setProfile(null);
   };
 
-  useEffect(() => {
-    let unsubscribeProfile: (() => void) | undefined;
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
-      if (currentUser) {
-        // Subscribe to user profile document in firestore for real-time updates
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        
-        unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
-          } else {
-            setProfile(null);
-          }
-          setLoading(false);
-        }, (error) => {
-          console.error("Error listening to user profile:", error);
-          setLoading(false);
-        });
-      } else {
-        if (unsubscribeProfile) {
-          unsubscribeProfile();
-        }
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeProfile) unsubscribeProfile();
-    };
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ user, profile, loading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

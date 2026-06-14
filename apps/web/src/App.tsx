@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 
@@ -23,11 +22,7 @@ const ApprovedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }
 
   if (!profile) {
-    return <Navigate to="/register" replace />;
-  }
-
-  if (profile.status === 'pending_approval') {
-    return <Navigate to="/register" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (profile.status === 'suspended') {
@@ -46,14 +41,9 @@ const ApprovedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   // Check access expiration for normal users
   if (profile.role !== 'super_admin' && profile.role !== 'admin' && profile.accessExpiresAt) {
-    let expiryMillis = 0;
-    if (profile.accessExpiresAt.seconds) {
-      expiryMillis = profile.accessExpiresAt.seconds * 1000;
-    } else if (profile.accessExpiresAt.toDate) {
-      expiryMillis = profile.accessExpiresAt.toDate().getTime();
-    } else {
-      expiryMillis = new Date(profile.accessExpiresAt).getTime();
-    }
+    const expiryMillis = typeof profile.accessExpiresAt === 'number'
+      ? profile.accessExpiresAt
+      : new Date(profile.accessExpiresAt).getTime();
     
     if (expiryMillis < Date.now()) {
       return (
@@ -94,7 +84,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  if (!user || !profile || profile.status !== 'approved' || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+  if (!user || !profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
     return <Navigate to="/" replace />;
   }
 
@@ -106,7 +96,6 @@ const AppContent: React.FC = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
         <Route 
           path="/" 
           element={
