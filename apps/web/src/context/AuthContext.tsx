@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile } from '../types';
 import { verifyToken, checkMasterPassphrase, generateToken } from '../utils/tokenManager';
+import { addAuditLog } from '../utils/auditLogger';
 
 export interface LocalUser {
   uid: string;
@@ -101,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           status: 'approved'
         });
         
+        addAuditLog('login', emailClean, 'Admin logged in using master credentials');
         return true;
       }
 
@@ -135,6 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         accessExpiresAt: payload.expiresAt
       });
 
+      addAuditLog('login', emailClean, `User logged in using access pass (expires ${new Date(payload.expiresAt).toLocaleDateString()})`);
       return true;
     } catch (err) {
       setLoading(false);

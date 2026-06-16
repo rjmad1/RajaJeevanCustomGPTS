@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Agent, Category } from '../types';
 import Navbar from '../components/Navbar';
 import defaultAgentsRaw from '../data/default-agents.json';
+import { addAuditLog } from '../utils/auditLogger';
 
 const Dashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -489,6 +490,15 @@ const Dashboard: React.FC = () => {
                           }}
                           onMouseLeave={() => {
                             setActiveTooltip(null);
+                          }}
+                          onClick={() => {
+                            const userEmail = user?.email || 'unknown_user';
+                            addAuditLog(
+                              'click_gpt',
+                              userEmail,
+                              `Clicked and launched CustomGPT: "${agent.name}"`,
+                              { gptId: agent.id, gptName: agent.name }
+                            );
                           }}
                         >
                           <span className="shrink-0 text-slate-400 group-hover/link:text-indigo-500 transition-colors">🔗</span>
