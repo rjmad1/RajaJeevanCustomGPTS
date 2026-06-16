@@ -19,6 +19,13 @@ const Dashboard: React.FC = () => {
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // Tooltip State
+  const [activeTooltip, setActiveTooltip] = useState<{
+    agent: Agent;
+    x: number;
+    y: number;
+  } | null>(null);
+
   // Modal State for CRUD (FAB triggered, Admins only)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
@@ -473,21 +480,20 @@ const Dashboard: React.FC = () => {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-slate-800/40 transition-colors w-full truncate focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none"
+                          onMouseMove={(e) => {
+                            setActiveTooltip({
+                              agent,
+                              x: e.clientX,
+                              y: e.clientY
+                            });
+                          }}
+                          onMouseLeave={() => {
+                            setActiveTooltip(null);
+                          }}
                         >
                           <span className="shrink-0 text-slate-400 group-hover/link:text-indigo-500 transition-colors">🔗</span>
                           <span className="truncate">{agent.name}</span>
                         </a>
-                        
-                        {/* Custom CSS Hover Tooltip */}
-                        <div className="absolute hidden group-hover/link:block left-1/2 -translate-x-1/2 bottom-full mb-2.5 z-50 w-72 p-4 bg-slate-950/95 dark:bg-slate-900/95 text-white rounded-xl shadow-xl border border-slate-800/40 text-xs leading-relaxed pointer-events-none animate-fadeIn">
-                          <h4 className="font-bold text-slate-100 mb-1.5 border-b border-slate-800 pb-1 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                            {agent.name}
-                          </h4>
-                          <p className="text-slate-300 font-medium">
-                            {agent.description || 'No description provided.'}
-                          </p>
-                        </div>
                       </div>
                     ))
                   )}
@@ -698,6 +704,30 @@ const Dashboard: React.FC = () => {
 
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Global Viewport-Anchored Tooltip to prevent overflow/clipping */}
+      {activeTooltip && (
+        <div 
+          style={{
+            position: 'fixed',
+            left: activeTooltip.x > window.innerWidth / 2 ? undefined : `${activeTooltip.x + 15}px`,
+            right: activeTooltip.x > window.innerWidth / 2 ? `${window.innerWidth - activeTooltip.x + 15}px` : undefined,
+            top: activeTooltip.y > window.innerHeight / 2 ? undefined : `${activeTooltip.y + 15}px`,
+            bottom: activeTooltip.y > window.innerHeight / 2 ? `${window.innerHeight - activeTooltip.y + 15}px` : undefined,
+            pointerEvents: 'none',
+            zIndex: 9999,
+          }}
+          className="w-72 p-4 bg-slate-950/95 dark:bg-slate-900/95 text-white rounded-xl shadow-xl border border-slate-800/40 text-xs leading-relaxed pointer-events-none animate-fadeIn"
+        >
+          <h4 className="font-bold text-slate-100 mb-1.5 border-b border-slate-800 pb-1 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+            {activeTooltip.agent.name}
+          </h4>
+          <p className="text-slate-300 font-medium">
+            {activeTooltip.agent.description || 'No description provided.'}
+          </p>
         </div>
       )}
     </div>
